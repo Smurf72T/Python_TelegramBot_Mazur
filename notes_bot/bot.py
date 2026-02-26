@@ -23,7 +23,7 @@ sys.path.insert(0, DJANGO_PATH)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
 django.setup()
 
-from notes_bot.statistics import increment_stat
+from notes_bot.statistics import increment_stat, get_user_stats
 
 try:
     from secrets import TOKEN
@@ -52,6 +52,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/appoint <event_id> <telegram_id> — назначить встречу\n"
         "/myappointments    — мои встречи (как участник)\n"
         "/myinvites         — мои приглашения (как организатор)\n"
+        "/confirm <id>      — принять приглашение\n"
+        "/decline <id>      — отклонить приглашение\n"
+        "/statistics        — статистика бота\n"
+        "/mycalendar        — мой личный кабинет (календарь)\n"
         "/cancel            — отменить текущее действие"
     )
 
@@ -108,7 +112,7 @@ async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(result)
 
     # Статистика: новое событие
-    await increment_stat('event_count')
+    await increment_stat('event_count', user_id=user_id)
 
     context.user_data.clear()
     return ConversationHandler.END
@@ -187,18 +191,19 @@ async def edit_set_value(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(result)
 
     # Статистика: редактирование
-    await increment_stat('edited_events')
+    await increment_stat('edited_events', user_id=user_id)
 
     context.user_data.clear()
     return ConversationHandler.END
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     context.user_data.clear()
     await update.message.reply_text("Действие отменено.")
 
     # Статистика: отмена
-    await increment_stat('cancelled_events')
+    await increment_stat('cancelled_events', user_id=user_id)
 
 
 # ─── Назначение встречи ─────────────────────────────────────
@@ -254,6 +259,21 @@ async def decline_appointment(update: Update, context: ContextTypes.DEFAULT_TYPE
     result = cal.update_appointment_status(int(context.args[0]), update.effective_user.id, "declined")
     await update.message.reply_text(result)
 
+
+async def my_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    cal = context.bot_data["calendar"]
+
+    events_text = cal.list_events(user_id)
+    stats_text = await get_user_stats(user_id)
+
+    await update.message.reply_text(
+        f"👤 **Личный кабинет**\n"
+        f"Telegram ID: `{user_id}`\n\n"
+        f"{stats_text}\n\n"
+        f"{events_text}",
+        parse_mode="Markdown"
+    )
 
 def main():
     calendar = Calendar() # создаём экземпляр здесь
@@ -311,6 +331,7 @@ def main():
     application.add_handler(CommandHandler("myinvites", my_invites))
     application.add_handler(CommandHandler("confirm", confirm_appointment))
     application.add_handler(CommandHandler("decline", decline_appointment))
+    application.add_handler(CommandHandler("mycalendar", my_calendar))
 
     print("Многопользовательский Календарь-бот запущен...")
 
