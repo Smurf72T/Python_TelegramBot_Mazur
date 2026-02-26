@@ -31,3 +31,48 @@ class BotStatistics(models.Model):
 
     def __str__(self):
         return f"Статистика за {self.date}"
+
+
+class Appointment(models.Model):
+    # Кто создал встречу (организатор)
+    organizer = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='organized_appointments'
+    )
+
+    # На какое событие приглашаем
+    event = models.ForeignKey(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='appointments'
+    )
+
+    # Кого пригласили
+    participant_telegram_id = models.BigIntegerField()  # telegram_id участника
+
+    date = models.DateField()
+    time = models.TimeField()
+    details = models.TextField(blank=True, default='')
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Ожидает подтверждения'),
+            ('confirmed', 'Подтверждено'),
+            ('declined', 'Отклонено'),
+            ('cancelled', 'Отменено'),
+        ],
+        default='pending'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'appointments'  # явно указываем имя таблицы
+        verbose_name = "Встреча"
+        verbose_name_plural = "Встречи"
+        unique_together = ('event', 'participant_telegram_id')  # один человек — одно приглашение на событие
+
+    def __str__(self):
+        return f"Встреча #{self.id} | {self.event.name} → tg:{self.participant_telegram_id} ({self.status})"

@@ -43,13 +43,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Календарь-бот (многопользовательский)\n\n"
         "Команды:\n"
-        "/register       — зарегистрироваться\n"
-        "/createevent    — добавить событие\n"
-        "/listevents     — ваши события\n"
-        "/readevent <id> — посмотреть событие\n"
-        "/editevent <id> — изменить событие\n"
-        "/deleteevent <id> — удалить событие\n"
-        "/cancel         — отменить"
+        "/register          — зарегистрироваться\n"
+        "/createevent       — добавить событие\n"
+        "/listevents        — ваши события\n"
+        "/readevent <id>    — посмотреть событие\n"
+        "/editevent <id>    — изменить событие\n"
+        "/deleteevent <id>  — удалить событие\n"
+        "/appoint <event_id> <telegram_id> — назначить встречу\n"
+        "/myappointments    — мои встречи (как участник)\n"
+        "/myinvites         — мои приглашения (как организатор)\n"
+        "/cancel            — отменить текущее действие"
     )
 
 
@@ -198,8 +201,62 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await increment_stat('cancelled_events')
 
 
+# ─── Назначение встречи ─────────────────────────────────────
+async def appoint_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        await update.message.reply_text("Использование: /appoint <event_id> <telegram_id_участника>")
+        return ConversationHandler.END
+    context.user_data["appoint_event_id"] = context.args[0]
+    context.user_data["appoint_participant"] = context.args[1]
+    await update.message.reply_text("Добавьте комментарий к приглашению (или отправьте /skip):")
+    return 0  # новое состояние
+
+
+async def appoint_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    details = update.message.text if update.message.text != "/skip" else ""
+    cal = context.bot_data["calendar"]
+    organizer_id = update.effective_user.id
+    event_id = context.user_data["appoint_event_id"]
+    participant = int(context.user_data["appoint_participant"])
+
+    result = cal.create_appointment(organizer_id, event_id, participant, details)
+    await update.message.reply_text(result)
+    context.user_data.clear()
+    return ConversationHandler.END
+
+
+# Команды просмотра встреч
+async def my_appointments(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cal = context.bot_data["calendar"]
+    await update.message.reply_text(cal.get_user_appointments(update.effective_user.id, as_participant=True))
+
+
+async def my_invites(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cal = context.bot_data["calendar"]
+    await update.message.reply_text(cal.get_user_appointments(update.effective_user.id, as_participant=False))
+
+
+# Подтверждение/отклонение (простая команда)
+async def confirm_appointment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Использование: /confirm <appointment_id>")
+        return
+    cal = context.bot_data["calendar"]
+    result = cal.update_appointment_status(int(context.args[0]), update.effective_user.id, "confirmed")
+    await update.message.reply_text(result)
+
+
+async def decline_appointment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Использование: /decline <appointment_id>")
+        return
+    cal = context.bot_data["calendar"]
+    result = cal.update_appointment_status(int(context.args[0]), update.effective_user.id, "declined")
+    await update.message.reply_text(result)
+
+
 def main():
-    calendar = Calendar()                           # создаём экземпляр здесь
+    calendar = Calendar() # создаём экземпляр здесь
 
     application = Application.builder() \
         .token(TOKEN) \
@@ -235,6 +292,12 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
+    appoint_conv = ConversationHandler(
+        entry_points=[CommandHandler("appoint", appoint_start)],
+        states={0: [MessageHandler(filters.TEXT & ~filters.COMMAND, appoint_details)]},
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
+
     application.add_handler(CommandHandler("start",       start))
     application.add_handler(CommandHandler("register", register))
     application.add_handler(create_conv)
@@ -243,6 +306,11 @@ def main():
     application.add_handler(CommandHandler("readevent",   read_event))
     application.add_handler(CommandHandler("deleteevent", delete_event))
     application.add_handler(CommandHandler("cancel",      cancel))
+    application.add_handler(appoint_conv)
+    application.add_handler(CommandHandler("myappointments", my_appointments))
+    application.add_handler(CommandHandler("myinvites", my_invites))
+    application.add_handler(CommandHandler("confirm", confirm_appointment))
+    application.add_handler(CommandHandler("decline", decline_appointment))
 
     print("Многопользовательский Календарь-бот запущен...")
 

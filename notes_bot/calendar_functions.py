@@ -1,4 +1,5 @@
 # notes_bot/calendar_functions.py
+import datetime
 
 import psycopg2
 from psycopg2 import pool
@@ -193,3 +194,111 @@ class Calendar:
     def close(self):
         if hasattr(self, "pool") and self.pool:
             self.pool.closeall()
+
+    # ─── Работа со встречами ─────────────────────────────────────
+    def create_appointment(self, organizer_id: int, event_id: int, participant_tg_id: int, details: str = "") -> str:
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+
+            # 1. Существует ли событие и принадлежит ли оно организатору
+            cur.execute(
+                "SELECT event_date, event_time FROM events WHERE id = %s AND user_id = %s",
+                (event_id, organizer_id)
+            )
+            row = cur.fetchone()
+            if not row:
+                return "❌ Событие не найдено или не принадлежит вам."
+
+            event_date, event_time = row
+
+            # 2. Зарегистрирован ли участник
+            cur.execute("SELECT 1 FROM users WHERE telegram_id = %s", (participant_tg_id,))
+            if not cur.fetchone():
+                return "❌ Участник не зарегистрирован в боте."
+
+            # 3. Свободен ли участник в это время
+            cur.execute("""
+                        SELECT COUNT(*)
+                        FROM appointments
+                        WHERE participant_telegram_id = %s
+                          AND date = %s
+                          AND time = %s
+                          AND status IN ('pending'
+                            , 'confirmed')
+                        """, (participant_tg_id, event_date, event_time))
+
+            if cur.fetchone()[0] > 0:
+                return "❌ Участник уже занят в это время."
+
+            # 4. Создаём приглашение
+            now = datetime.now()
+            cur.execute(
+                """
+                INSERT INTO appointments
+                (organizer_id, event_id, participant_telegram_id, date, time, details, status, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, 'pending', %s) RETURNING id
+                """,
+                (organizer_id, event_id, participant_tg_id, event_date, event_time, details or None, now)
+            )
+            app_id = cur.fetchone()[0]
+            conn.commit()
+
+            return f"✅ Приглашение отправлено! ID встречи: {app_id}"
+        except Exception as e:
+            conn.rollback()
+            return f"❌ Ошибка при создании встречи: {str(e)}"
+        finally:
+            cur.close()
+            self._put_connection(conn)
+
+    def get_user_appointments(self, telegram_id: int, as_participant: bool = True) -> str:
+        # as_participant=True — встречи, куда пригласили пользователя
+        # False — встречи, которые он создал
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            if as_participant:
+                cur.execute("""
+                            SELECT a.id, e.name, a.date, a.time, a.status
+                            FROM appointments a
+                                     JOIN events e ON a.event_id = e.id
+                            WHERE a.participant_telegram_id = %s
+                            ORDER BY a.date, a.time
+                            """, (telegram_id,))
+            else:
+                cur.execute("""
+                            SELECT a.id, e.name, a.date, a.time, a.status
+                            FROM appointments a
+                                     JOIN events e ON a.event_id = e.id
+                            WHERE a.organizer_id = %s
+                            ORDER BY a.date, a.time
+                            """, (telegram_id,))
+
+            rows = cur.fetchall()
+            if not rows:
+                return "📭 У вас пока нет встреч."
+
+            lines = ["📅 Ваши встречи:"]
+            for aid, name, dt, tm, status in rows:
+                lines.append(f"• #{aid} | {dt} {tm} | {name} | {status}")
+            return "\n".join(lines)
+        finally:
+            cur.close()
+            self._put_connection(conn)
+
+    def update_appointment_status(self, appointment_id: int, participant_id: int, new_status: str) -> str:
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE appointments SET status = %s WHERE id = %s AND participant_telegram_id = %s",
+                (new_status, appointment_id, participant_id)
+            )
+            if cur.rowcount == 0:
+                return "❌ Встреча не найдена или не ваша."
+            conn.commit()
+            return f"✅ Статус встречи изменён на: {new_status}"
+        finally:
+            cur.close()
+            self._put_connection(conn)
