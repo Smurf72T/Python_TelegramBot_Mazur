@@ -24,7 +24,30 @@ class Calendar:
     def _put_connection(self, conn):
         self.pool.putconn(conn)
 
-    def create_event(self, name: str, date_str: str, time_str: str, details: str = "") -> str:
+    # ─── Регистрация пользователя ─────────────────────────────
+    def register_user(self, telegram_id: int, username: str = None) -> str:
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO users (telegram_id, username)
+                VALUES (%s, %s)
+                ON CONFLICT (telegram_id) DO NOTHING
+                """,
+                (telegram_id, username)
+            )
+            conn.commit()
+            return "✅ Вы успешно зарегистрированы в календаре!"
+        except Exception as e:
+            conn.rollback()
+            return f"❌ Ошибка регистрации: {str(e)}"
+        finally:
+            cur.close()
+            self._put_connection(conn)
+
+    # ─── Все остальные методы теперь требуют user_id ───────────
+    def create_event(self, user_id: int, name: str, date_str: str, time_str: str, details: str = "") -> str:
         try:
             d = date.fromisoformat(date_str)
             t = time.fromisoformat(time_str)
@@ -36,11 +59,11 @@ class Calendar:
             cur = conn.cursor()
             cur.execute(
                 """
-                INSERT INTO events (name, event_date, event_time, details)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO events (user_id, name, event_date, event_time, details)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (name.strip(), d, t, details.strip() or None)
+                (user_id, name.strip(), d, t, details.strip() or None)
             )
             event_id = cur.fetchone()[0]
             conn.commit()
@@ -52,17 +75,45 @@ class Calendar:
             cur.close()
             self._put_connection(conn)
 
-    def read_event(self, event_id: str) -> str:
+    def list_events(self, user_id: int) -> str:
         conn = self._get_connection()
         try:
             cur = conn.cursor()
             cur.execute(
-                "SELECT id, name, event_date, event_time, details FROM events WHERE id = %s",
-                (event_id,)
+                """
+                SELECT id, name, event_date, event_time 
+                FROM events 
+                WHERE user_id = %s
+                ORDER BY event_date, event_time
+                """,
+                (user_id,)
+            )
+            rows = cur.fetchall()
+            if not rows:
+                return "📭 У вас пока нет событий."
+            lines = ["📋 Ваши события:"]
+            for eid, name, dt, tm in rows:
+                lines.append(f"• #{eid} | {dt} {tm} | {name}")
+            return "\n".join(lines)
+        finally:
+            cur.close()
+            self._put_connection(conn)
+
+    def read_event(self, user_id: int, event_id: str) -> str:
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, name, event_date, event_time, details 
+                FROM events 
+                WHERE id = %s AND user_id = %s
+                """,
+                (event_id, user_id)
             )
             row = cur.fetchone()
             if not row:
-                return "❌ Событие не найдено."
+                return "❌ Событие не найдено или не принадлежит вам."
             eid, name, dt, tm, details = row
             return (f"📅 Событие #{eid}\n"
                     f"Название: {name}\n"
@@ -73,7 +124,7 @@ class Calendar:
             cur.close()
             self._put_connection(conn)
 
-    def edit_event(self, event_id: str, name=None, date=None, time=None, details=None) -> str:
+    def edit_event(self, user_id: int, event_id: str, name=None, date=None, time=None, details=None) -> str:
         if all(v is None for v in (name, date, time, details)):
             return "Нечего изменять"
 
@@ -104,12 +155,12 @@ class Calendar:
                 updates.append("details = %s")
                 params.append(details.strip() or None)
 
-            params.append(event_id)
-            query = f"UPDATE events SET {', '.join(updates)} WHERE id = %s"
+            params.extend([event_id, user_id])
+            query = f"UPDATE events SET {', '.join(updates)} WHERE id = %s AND user_id = %s"
             cur.execute(query, params)
             if cur.rowcount == 0:
                 conn.rollback()
-                return "❌ Событие не найдено"
+                return "❌ Событие не найдено или не принадлежит вам"
             conn.commit()
             return f"✅ Событие #{event_id} обновлено"
         except Exception as e:
@@ -119,14 +170,17 @@ class Calendar:
             cur.close()
             self._put_connection(conn)
 
-    def delete_event(self, event_id: str) -> str:
+    def delete_event(self, user_id: int, event_id: str) -> str:
         conn = self._get_connection()
         try:
             cur = conn.cursor()
-            cur.execute("DELETE FROM events WHERE id = %s", (event_id,))
+            cur.execute(
+                "DELETE FROM events WHERE id = %s AND user_id = %s",
+                (event_id, user_id)
+            )
             if cur.rowcount == 0:
                 conn.rollback()
-                return "❌ Событие не найдено"
+                return "❌ Событие не найдено или не принадлежит вам"
             conn.commit()
             return f"🗑 Событие #{event_id} удалено"
         except Exception as e:
@@ -136,28 +190,6 @@ class Calendar:
             cur.close()
             self._put_connection(conn)
 
-    def list_events(self) -> str:
-        conn = self._get_connection()
-        try:
-            cur = conn.cursor()
-            cur.execute(
-                "SELECT id, name, event_date, event_time FROM events "
-                "ORDER BY event_date, event_time"
-            )
-            rows = cur.fetchall()
-            if not rows:
-                return "📭 Пока нет событий в календаре."
-            lines = ["📋 Список всех событий:"]
-            for eid, name, dt, tm in rows:
-                lines.append(f"• #{eid} | {dt} {tm} | {name}")
-            return "\n".join(lines)
-        finally:
-            cur.close()
-            self._put_connection(conn)
-
     def close(self):
         if hasattr(self, "pool") and self.pool:
             self.pool.closeall()
-
-
-# Глобальный экземпляр создаётся позже — в bot.py
