@@ -22,13 +22,11 @@ class Calendar:
             json.dump(self.events, f, ensure_ascii=False, indent=2)
 
     def create_event(self, name: str, date: str, time: str, details: str = "") -> str:
-        """Возвращает сообщение для пользователя"""
         try:
-            # Проверка формата даты
             datetime.strptime(date, "%Y-%m-%d")
             datetime.strptime(time, "%H:%M")
         except ValueError:
-            return "❌ Неверный формат даты или времени!\nИспользуй: ГГГГ-ММ-ДД и ЧЧ:ММ"
+            return "❌ Неверный формат! Используйте ГГГГ-ММ-ДД и ЧЧ:ММ"
 
         event_id = str(len(self.events) + 1)
         self.events[event_id] = {
@@ -39,47 +37,41 @@ class Calendar:
             "details": details.strip()
         }
         self._save_events()
-        return f"✅ Событие «{name}» создано!\nID: {event_id}"
+        return f"✅ Событие «{name}» создано (ID: {event_id})"
 
     def read_event(self, event_id: str) -> str:
         if event_id not in self.events:
-            return "❌ Событие не найдено."
+            return "❌ Событие не найдено"
         e = self.events[event_id]
-        return (f"📅 Событие #{e['id']}\n"
-                f"Название: {e['name']}\n"
-                f"Дата: {e['date']}\n"
-                f"Время: {e['time']}\n"
-                f"Описание: {e['details'] or '—'}")
+        return (f"📅 #{e['id']}  {e['date']} {e['time']}\n"
+                f"{e['name']}\n"
+                f"{e['details'] or '— без описания —'}")
 
-    def edit_event(self, event_id: str, name: str = None, date: str = None,
-                   time: str = None, details: str = None) -> str:
+    def edit_event(self, event_id: str, name=None, date=None, time=None, details=None) -> str:
         if event_id not in self.events:
-            return "❌ Событие не найдено."
-
-        if name: self.events[event_id]["name"] = name.strip()
-        if date: self.events[event_id]["date"] = date
-        if time: self.events[event_id]["time"] = time
+            return "❌ Событие не найдено"
+        if name is not None:    self.events[event_id]["name"]    = name.strip()
+        if date is not None:    self.events[event_id]["date"]    = date
+        if time is not None:    self.events[event_id]["time"]    = time
         if details is not None: self.events[event_id]["details"] = details.strip()
-
         self._save_events()
-        return f"✅ Событие #{event_id} обновлено."
+        return f"✅ Событие #{event_id} обновлено"
 
     def delete_event(self, event_id: str) -> str:
         if event_id not in self.events:
-            return "❌ Событие не найдено."
+            return "❌ Событие не найдено"
         del self.events[event_id]
         self._save_events()
-        return f"🗑 Событие #{event_id} удалено."
+        return f"🗑️ Событие #{event_id} удалено"
 
     def list_events(self) -> str:
         if not self.events:
-            return "📭 Пока нет событий в календаре."
-
-        lines = ["📋 Список всех событий:"]
-        for eid, e in sorted(self.events.items(), key=lambda x: x[1]["date"]):
+            return "📭 Календарь пуст"
+        lines = ["📅 События (отсортированы по дате):"]
+        for eid, e in sorted(self.events.items(), key=lambda x: x[1]["date"] + x[1]["time"]):
             lines.append(f"• #{eid} | {e['date']} {e['time']} | {e['name']}")
         return "\n".join(lines)
 
 
-# Глобальный экземпляр (будет импортирован в bot.py)
+# Глобальный экземпляр
 calendar = Calendar()
