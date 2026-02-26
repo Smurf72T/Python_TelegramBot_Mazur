@@ -12,6 +12,11 @@ class Event(models.Model):
     event_time = models.TimeField()
     details = models.TextField(blank=True, default='')
 
+    is_public = models.BooleanField(
+        default=False,
+        verbose_name="Публичное событие"
+    )
+
     class Meta:
         db_table = 'events'
         ordering = ['-event_date', '-event_time']

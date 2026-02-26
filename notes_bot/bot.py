@@ -56,6 +56,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/decline <id>      — отклонить приглашение\n"
         "/statistics        — статистика бота\n"
         "/mycalendar        — мой личный кабинет (календарь)\n"
+        "/publicevent <id>  — сделать событие публичным/приватным\n"
+        "/publicevents      — посмотреть все публичные события\n"
         "/cancel            — отменить текущее действие"
     )
 
@@ -266,14 +268,36 @@ async def my_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     events_text = cal.list_events(user_id)
     stats_text = await get_user_stats(user_id)
+    public_text = cal.get_public_events()  # покажем все публичные
 
     await update.message.reply_text(
         f"👤 **Личный кабинет**\n"
         f"Telegram ID: `{user_id}`\n\n"
         f"{stats_text}\n\n"
-        f"{events_text}",
+        f"{events_text}\n\n"
+        f"{public_text}",
         parse_mode="Markdown"
     )
+
+
+# ─── Публичные события ─────────────────────────────────────
+async def toggle_public_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Использование: /publicevent <id>")
+        return
+
+    event_id = context.args[0]
+    user_id = update.effective_user.id
+    cal = context.bot_data["calendar"]
+
+    result = cal.toggle_public(user_id, event_id)
+    await update.message.reply_text(result)
+
+
+async def public_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cal = context.bot_data["calendar"]
+    await update.message.reply_text(cal.get_public_events())
+
 
 def main():
     calendar = Calendar() # создаём экземпляр здесь
@@ -332,6 +356,8 @@ def main():
     application.add_handler(CommandHandler("confirm", confirm_appointment))
     application.add_handler(CommandHandler("decline", decline_appointment))
     application.add_handler(CommandHandler("mycalendar", my_calendar))
+    application.add_handler(CommandHandler("publicevent", toggle_public_event))
+    application.add_handler(CommandHandler("publicevents", public_events))
 
     print("Многопользовательский Календарь-бот запущен...")
 

@@ -51,7 +51,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_id', 'name', 'event_date', 'event_time')
-    list_filter = ('event_date', 'user_id')
+    list_filter = ('event_date', 'user_id', 'is_public')
     search_fields = ('name', 'details')
 
 

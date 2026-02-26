@@ -302,3 +302,57 @@ class Calendar:
         finally:
             cur.close()
             self._put_connection(conn)
+
+    # ─── Публичные события ─────────────────────────────────────
+    def toggle_public(self, user_id: int, event_id: str) -> str:
+        """Переключает флаг публичности события"""
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE events
+                SET is_public = NOT is_public
+                WHERE id = %s
+                  AND user_id = %s RETURNING is_public
+                """,
+                (event_id, user_id)
+            )
+            row = cur.fetchone()
+            if not row:
+                return "❌ Событие не найдено или не принадлежит вам."
+
+            new_status = "публичным" if row[0] else "приватным"
+            conn.commit()
+            return f"✅ Событие #{event_id} теперь {new_status}."
+        finally:
+            cur.close()
+            self._put_connection(conn)
+
+    def get_public_events(self) -> str:
+        """Возвращает все публичные события других пользователей"""
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                        SELECT e.id, u.username, e.name, e.event_date, e.event_time, e.details
+                        FROM events e
+                                 JOIN users u ON e.user_id = u.telegram_id
+                        WHERE e.is_public = TRUE
+                        ORDER BY e.event_date, e.event_time
+                        """)
+            rows = cur.fetchall()
+
+            if not rows:
+                return "📭 Пока нет публичных событий."
+
+            lines = ["🌍 Публичные события:"]
+            for eid, username, name, dt, tm, details in rows:
+                username = username or "Аноним"
+                lines.append(f"• #{eid} | {dt} {tm} | {name} (@{username})")
+                if details:
+                    lines.append(f"   ↳ {details}")
+            return "\n".join(lines)
+        finally:
+            cur.close()
+            self._put_connection(conn)
