@@ -15,3 +15,19 @@ class Event(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.event_date} {self.event_time})"
+
+
+class BotStatistics(models.Model):
+    date             = models.DateField(unique=True)
+    user_count       = models.PositiveIntegerField(default=0)
+    event_count      = models.PositiveIntegerField(default=0)
+    edited_events    = models.PositiveIntegerField(default=0)
+    cancelled_events = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Статистика бота"
+        verbose_name_plural = "Статистика бота"
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"Статистика за {self.date}"

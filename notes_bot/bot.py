@@ -8,9 +8,22 @@ from telegram.ext import (
     ConversationHandler,
     ContextTypes,
 )
+import os
+import sys
+import django
 
 from db_config import DB_CONFIG
 from .calendar_functions import Calendar
+
+# Настраиваем Django-окружение (только один раз)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DJANGO_PATH = os.path.join(BASE_DIR, 'django-admin-panel')
+sys.path.insert(0, DJANGO_PATH)
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
+django.setup()
+
+from notes_bot.statistics import increment_stat
 
 try:
     from secrets import TOKEN
@@ -46,6 +59,9 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cal = context.bot_data["calendar"]
     result = cal.register_user(user_id, username)
     await update.message.reply_text(result)
+
+    # Статистика: новый пользователь
+    await increment_stat('user_count')
 
 
 # ─── Создание события ───────────────────────────────────────
@@ -87,6 +103,9 @@ async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cal = context.bot_data["calendar"]
     result = cal.create_event(user_id, name, date, time, descr)
     await update.message.reply_text(result)
+
+    # Статистика: новое событие
+    await increment_stat('event_count')
 
     context.user_data.clear()
     return ConversationHandler.END
@@ -164,6 +183,9 @@ async def edit_set_value(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = cal.edit_event(user_id, eid, **{mapping[field]: value})
     await update.message.reply_text(result)
 
+    # Статистика: редактирование
+    await increment_stat('edited_events')
+
     context.user_data.clear()
     return ConversationHandler.END
 
@@ -171,6 +193,9 @@ async def edit_set_value(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     await update.message.reply_text("Действие отменено.")
+
+    # Статистика: отмена
+    await increment_stat('cancelled_events')
 
 
 def main():
