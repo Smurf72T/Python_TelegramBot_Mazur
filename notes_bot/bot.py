@@ -58,6 +58,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/mycalendar        — мой личный кабинет (календарь)\n"
         "/publicevent <id>  — сделать событие публичным/приватным\n"
         "/publicevents      — посмотреть все публичные события\n"
+        "/export            — выгрузить события в CSV\n"
         "/cancel            — отменить текущее действие"
     )
 
@@ -299,6 +300,21 @@ async def public_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(cal.get_public_events())
 
 
+async def export_events_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    # Прямая ссылка на Django-эндпоинт
+    export_url = f"http://127.0.0.1:8000/export/events/?user_id={user_id}"
+
+    await update.message.reply_text(
+        f"📤 **Выгрузка вашего календаря**\n\n"
+        f"Нажмите на ссылку ниже, чтобы скачать файл CSV с вашими событиями:\n\n"
+        f"[⬇️ Скачать мои события]({export_url})",
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
+
 def main():
     calendar = Calendar() # создаём экземпляр здесь
 
@@ -358,6 +374,7 @@ def main():
     application.add_handler(CommandHandler("mycalendar", my_calendar))
     application.add_handler(CommandHandler("publicevent", toggle_public_event))
     application.add_handler(CommandHandler("publicevents", public_events))
+    application.add_handler(CommandHandler("export", export_events_cmd))
 
     print("Многопользовательский Календарь-бот запущен...")
 
