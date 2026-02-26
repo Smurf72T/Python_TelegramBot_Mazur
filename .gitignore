@@ -13,6 +13,7 @@ Thumbs.db
 *.iml
 *.iws
 secrets.py
+db_config.py
 
 # Vim / NeoVim
 *~
@@ -179,4 +180,4 @@ celery_results/
 *.backup
 *.sql
 *.tar.gz
-*.zip
+*.zipdd

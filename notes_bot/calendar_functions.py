@@ -1,77 +1,163 @@
-import os
-import json
-from datetime import datetime
+# notes_bot/calendar_functions.py
+
+import psycopg2
+from psycopg2 import pool
+from datetime import date, time
+from db_config import DB_CONFIG
+
 
 class Calendar:
     def __init__(self):
-        self.file_path = "data/events.json"
-        os.makedirs("data", exist_ok=True)
-        self.events = self._load_events()
+        self.pool = pool.ThreadedConnectionPool(
+            minconn=DB_CONFIG["minconn"],
+            maxconn=DB_CONFIG["maxconn"],
+            host=DB_CONFIG["host"],
+            port=DB_CONFIG["port"],
+            database=DB_CONFIG["database"],
+            user=DB_CONFIG["user"],
+            password=DB_CONFIG["password"],
+        )
 
-    def _load_events(self) -> dict:
-        if os.path.exists(self.file_path):
-            try:
-                with open(self.file_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except:
-                return {}
-        return {}
+    def _get_connection(self):
+        return self.pool.getconn()
 
-    def _save_events(self):
-        with open(self.file_path, "w", encoding="utf-8") as f:
-            json.dump(self.events, f, ensure_ascii=False, indent=2)
+    def _put_connection(self, conn):
+        self.pool.putconn(conn)
 
-    def create_event(self, name: str, date: str, time: str, details: str = "") -> str:
+    def create_event(self, name: str, date_str: str, time_str: str, details: str = "") -> str:
         try:
-            datetime.strptime(date, "%Y-%m-%d")
-            datetime.strptime(time, "%H:%M")
+            d = date.fromisoformat(date_str)
+            t = time.fromisoformat(time_str)
         except ValueError:
-            return "❌ Неверный формат! Используйте ГГГГ-ММ-ДД и ЧЧ:ММ"
+            return "❌ Неверный формат! Дата: ГГГГ-ММ-ДД  Время: ЧЧ:ММ"
 
-        event_id = str(len(self.events) + 1)
-        self.events[event_id] = {
-            "id": event_id,
-            "name": name.strip(),
-            "date": date,
-            "time": time,
-            "details": details.strip()
-        }
-        self._save_events()
-        return f"✅ Событие «{name}» создано (ID: {event_id})"
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO events (name, event_date, event_time, details)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+                """,
+                (name.strip(), d, t, details.strip() or None)
+            )
+            event_id = cur.fetchone()[0]
+            conn.commit()
+            return f"✅ Событие «{name}» создано!\nID: {event_id}"
+        except Exception as e:
+            conn.rollback()
+            return f"❌ Ошибка базы данных: {str(e)}"
+        finally:
+            cur.close()
+            self._put_connection(conn)
 
     def read_event(self, event_id: str) -> str:
-        if event_id not in self.events:
-            return "❌ Событие не найдено"
-        e = self.events[event_id]
-        return (f"📅 #{e['id']}  {e['date']} {e['time']}\n"
-                f"{e['name']}\n"
-                f"{e['details'] or '— без описания —'}")
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, name, event_date, event_time, details FROM events WHERE id = %s",
+                (event_id,)
+            )
+            row = cur.fetchone()
+            if not row:
+                return "❌ Событие не найдено."
+            eid, name, dt, tm, details = row
+            return (f"📅 Событие #{eid}\n"
+                    f"Название: {name}\n"
+                    f"Дата:   {dt}\n"
+                    f"Время:   {tm}\n"
+                    f"Описание: {details or '—'}")
+        finally:
+            cur.close()
+            self._put_connection(conn)
 
     def edit_event(self, event_id: str, name=None, date=None, time=None, details=None) -> str:
-        if event_id not in self.events:
-            return "❌ Событие не найдено"
-        if name is not None:    self.events[event_id]["name"]    = name.strip()
-        if date is not None:    self.events[event_id]["date"]    = date
-        if time is not None:    self.events[event_id]["time"]    = time
-        if details is not None: self.events[event_id]["details"] = details.strip()
-        self._save_events()
-        return f"✅ Событие #{event_id} обновлено"
+        if all(v is None for v in (name, date, time, details)):
+            return "Нечего изменять"
+
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            updates = []
+            params = []
+
+            if name is not None:
+                updates.append("name = %s")
+                params.append(name.strip())
+            if date is not None:
+                try:
+                    d = date.fromisoformat(date)
+                    updates.append("event_date = %s")
+                    params.append(d)
+                except ValueError:
+                    return "❌ Неверный формат даты"
+            if time is not None:
+                try:
+                    t = time.fromisoformat(time)
+                    updates.append("event_time = %s")
+                    params.append(t)
+                except ValueError:
+                    return "❌ Неверный формат времени"
+            if details is not None:
+                updates.append("details = %s")
+                params.append(details.strip() or None)
+
+            params.append(event_id)
+            query = f"UPDATE events SET {', '.join(updates)} WHERE id = %s"
+            cur.execute(query, params)
+            if cur.rowcount == 0:
+                conn.rollback()
+                return "❌ Событие не найдено"
+            conn.commit()
+            return f"✅ Событие #{event_id} обновлено"
+        except Exception as e:
+            conn.rollback()
+            return f"❌ Ошибка: {str(e)}"
+        finally:
+            cur.close()
+            self._put_connection(conn)
 
     def delete_event(self, event_id: str) -> str:
-        if event_id not in self.events:
-            return "❌ Событие не найдено"
-        del self.events[event_id]
-        self._save_events()
-        return f"🗑️ Событие #{event_id} удалено"
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM events WHERE id = %s", (event_id,))
+            if cur.rowcount == 0:
+                conn.rollback()
+                return "❌ Событие не найдено"
+            conn.commit()
+            return f"🗑 Событие #{event_id} удалено"
+        except Exception as e:
+            conn.rollback()
+            return f"❌ Ошибка: {str(e)}"
+        finally:
+            cur.close()
+            self._put_connection(conn)
 
     def list_events(self) -> str:
-        if not self.events:
-            return "📭 Календарь пуст"
-        lines = ["📅 События (отсортированы по дате):"]
-        for eid, e in sorted(self.events.items(), key=lambda x: x[1]["date"] + x[1]["time"]):
-            lines.append(f"• #{eid} | {e['date']} {e['time']} | {e['name']}")
-        return "\n".join(lines)
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, name, event_date, event_time FROM events "
+                "ORDER BY event_date, event_time"
+            )
+            rows = cur.fetchall()
+            if not rows:
+                return "📭 Пока нет событий в календаре."
+            lines = ["📋 Список всех событий:"]
+            for eid, name, dt, tm in rows:
+                lines.append(f"• #{eid} | {dt} {tm} | {name}")
+            return "\n".join(lines)
+        finally:
+            cur.close()
+            self._put_connection(conn)
+
+    def close(self):
+        if hasattr(self, "pool") and self.pool:
+            self.pool.closeall()
 
 
-# Глобальный экземпляр
-calendar = Calendar()
+# Глобальный экземпляр создаётся позже — в bot.py
