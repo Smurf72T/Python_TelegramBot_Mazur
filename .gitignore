@@ -1,1 +1,183 @@
-/zadacha/
+# === Системные файлы ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# === Редакторы и IDE ===
+# PyCharm / IntelliJ
+.idea/
+*.iml
+*.iws
+secrets.py
+db_config.py
+
+# Vim / NeoVim
+*~
+.swp
+.swo
+.backup
+.session
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+.elc
+auto-save-list/
+tramp
+.\#*
+
+# == Python ==
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Расширения C
+*.so
+
+# Дистрибуция
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Тестирование
+.coverage
+.coverage.*
+.cache
+.nox/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Виртуальные окружения
+venv/
+ENV/
+env/
+.venv/
+env.bak/
+venv.bak/
+__pypackages__/
+
+# Переменные окружения
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+secrets.json
+config/
+instance/
+
+# Логи
+*.log
+logs/
+log/
+
+# === Django ===
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+local_settings.py
+
+# === FastAPI / Starlette ===
+/openapi.json
+/docs
+/redoc
+/swagger.json
+
+# Alembic (если используется с SQLAlchemy)
+alembic/versions/
+
+# === PostgreSQL ===
+# Локальные файлы данных PostgreSQL (если запускается вне Docker)
+pgdata/
+postgres-data/
+*.dump
+
+# === Docker ===
+docker-compose.override.yml
+.dockerignore
+.docker/
+containerd/
+bin/
+# Игнорируем .env файлы, если они используются только локально
+.env.docker
+.env.prod
+.env.staging
+
+# Исключаем артефакты сборки
+Dockerfile.debug
+.dockerignore.debug
+
+# Кэш BuildKit
+.docker/build/
+
+# === Git ===
+.gitignore.local
+
+# === Nginx / Static files (если используется в Docker) ===
+nginx/logs/
+nginx/conf.d/
+nginx/ssl/
+
+# === Node.js (если используется frontend или сборка через JS) ===
+node_modules/
+npm-debug.log*
+yarn-error.log
+yarn-debug.log
+.pnpm-debug.log
+.next/
+out/
+build/
+
+# === Локальные настройки разработки ===
+/debug.log
+/celerybeat-schedule
+celerybeat-schedule.*
+
+# === Celery (если используется) ===
+celery/
+celery_results/
+
+# === Backups ===
+*.bak
+*.backup
+*.sql
+*.tar.gz
+*.zipdd
