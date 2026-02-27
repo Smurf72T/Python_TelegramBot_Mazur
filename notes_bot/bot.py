@@ -1,5 +1,9 @@
 import asyncio
-from telegram import Update
+from datetime import datetime
+import uuid
+
+from asgiref.sync import sync_to_async
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -7,13 +11,12 @@ from telegram.ext import (
     filters,
     ConversationHandler,
     ContextTypes,
+    CallbackQueryHandler,
 )
+
 import os
 import sys
 import django
-
-from db_config import DB_CONFIG
-from .calendar_functions import Calendar
 
 # Настраиваем Django-окружение (только один раз)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,19 +27,19 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
 django.setup()
 
 from notes_bot.statistics import increment_stat, get_user_stats
+from notes_bot.calendar_functions import Calendar
 
 try:
     from secrets import TOKEN
 except ImportError:
-    import os
     TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     if not TOKEN:
         raise ValueError("Токен не найден")
 
-
 # Состояния
 NAME, DATE, TIME, DETAILS = range(4)
 EDIT_FIELD, EDIT_VALUE = range(2)
+APPOINT_COMMENT = 0
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -54,11 +57,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/myinvites         — мои приглашения (как организатор)\n"
         "/confirm <id>      — принять приглашение\n"
         "/decline <id>      — отклонить приглашение\n"
-        "/statistics        — статистика бота\n"
-        "/mycalendar        — мой личный кабинет (календарь)\n"
+        "/mycalendar        — мой личный кабинет\n"
         "/publicevent <id>  — сделать событие публичным/приватным\n"
         "/publicevents      — посмотреть все публичные события\n"
-        "/export            — выгрузить события в CSV\n"
+        "/export            — выгрузить события (выбор формата)\n"
         "/cancel            — отменить текущее действие"
     )
 
@@ -68,9 +70,15 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     cal = context.bot_data["calendar"]
     result = cal.register_user(user_id, username)
-    await update.message.reply_text(result)
 
-    # Статистика: новый пользователь
+    # Генерируем токен, если его ещё нет
+    from events.models import UserProfile
+    profile, created = await sync_to_async(UserProfile.objects.get_or_create)(telegram_id=user_id)
+    if created or not profile.export_token:
+        profile.export_token = str(uuid.uuid4())
+        await sync_to_async(profile.save)()
+
+    await update.message.reply_text(result)
     await increment_stat('user_count')
 
 
@@ -99,9 +107,9 @@ async def create_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    name  = context.user_data.get("name", "").strip()
-    date  = context.user_data.get("date", "").strip()
-    time  = context.user_data.get("time", "").strip()
+    name = context.user_data.get("name", "").strip()
+    date = context.user_data.get("date", "").strip()
+    time = context.user_data.get("time", "").strip()
     descr = update.message.text.strip()
 
     if not name or not date or not time:
@@ -114,14 +122,13 @@ async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = cal.create_event(user_id, name, date, time, descr)
     await update.message.reply_text(result)
 
-    # Статистика: новое событие
     await increment_stat('event_count', user_id=user_id)
 
     context.user_data.clear()
     return ConversationHandler.END
 
 
-# ─── Остальные команды с user_id ─────────────────────────────
+# ─── Простые команды событий ─────────────────────────────────
 async def list_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     cal = context.bot_data["calendar"]
@@ -146,7 +153,7 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(cal.delete_event(user_id, context.args[0]))
 
 
-# ─── Редактирование события (по одному полю) ─────────────────
+# ─── Редактирование события ──────────────────────────────────
 async def edit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Напишите: /editevent 123")
@@ -178,7 +185,7 @@ async def edit_choose_field(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def edit_set_value(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    eid   = context.user_data.get("edit_id")
+    eid = context.user_data.get("edit_id")
     field = context.user_data.get("edit_field")
     value = update.message.text.strip()
 
@@ -193,35 +200,35 @@ async def edit_set_value(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = cal.edit_event(user_id, eid, **{mapping[field]: value})
     await update.message.reply_text(result)
 
-    # Статистика: редактирование
     await increment_stat('edited_events', user_id=user_id)
 
     context.user_data.clear()
     return ConversationHandler.END
 
 
+# ─── Отмена ──────────────────────────────────────────────────
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     context.user_data.clear()
     await update.message.reply_text("Действие отменено.")
-
-    # Статистика: отмена
     await increment_stat('cancelled_events', user_id=user_id)
 
 
 # ─── Назначение встречи ─────────────────────────────────────
 async def appoint_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) < 2:
-        await update.message.reply_text("Использование: /appoint <event_id> <telegram_id_участника>")
+        await update.message.reply_text("Использование: /appoint <event_id> <telegram_id>")
         return ConversationHandler.END
     context.user_data["appoint_event_id"] = context.args[0]
     context.user_data["appoint_participant"] = context.args[1]
-    await update.message.reply_text("Добавьте комментарий к приглашению (или отправьте /skip):")
-    return 0  # новое состояние
+    await update.message.reply_text("Комментарий к приглашению (или /skip):")
+    return APPOINT_COMMENT
 
 
 async def appoint_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    details = update.message.text if update.message.text != "/skip" else ""
+    text = update.message.text
+    details = "" if text == "/skip" else text.strip()
+
     cal = context.bot_data["calendar"]
     organizer_id = update.effective_user.id
     event_id = context.user_data["appoint_event_id"]
@@ -233,7 +240,7 @@ async def appoint_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-# Команды просмотра встреч
+# ─── Мои встречи и приглашения ──────────────────────────────
 async def my_appointments(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cal = context.bot_data["calendar"]
     await update.message.reply_text(cal.get_user_appointments(update.effective_user.id, as_participant=True))
@@ -244,7 +251,7 @@ async def my_invites(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(cal.get_user_appointments(update.effective_user.id, as_participant=False))
 
 
-# Подтверждение/отклонение (простая команда)
+# ─── Подтвердить / Отклонить ────────────────────────────────
 async def confirm_appointment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Использование: /confirm <appointment_id>")
@@ -263,25 +270,27 @@ async def decline_appointment(update: Update, context: ContextTypes.DEFAULT_TYPE
     await update.message.reply_text(result)
 
 
+# ─── Личный кабинет ─────────────────────────────────────────
 async def my_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     cal = context.bot_data["calendar"]
 
     events_text = cal.list_events(user_id)
     stats_text = await get_user_stats(user_id)
-    public_text = cal.get_public_events()  # покажем все публичные
+    public_text = cal.get_public_events()
 
     await update.message.reply_text(
         f"👤 **Личный кабинет**\n"
         f"Telegram ID: `{user_id}`\n\n"
         f"{stats_text}\n\n"
         f"{events_text}\n\n"
-        f"{public_text}",
+        f"{public_text}\n\n"
+        f"Для выгрузки календаря используйте /export",
         parse_mode="Markdown"
     )
 
 
-# ─── Публичные события ─────────────────────────────────────
+# ─── Публичные события ──────────────────────────────────────
 async def toggle_public_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Использование: /publicevent <id>")
@@ -300,23 +309,55 @@ async def public_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(cal.get_public_events())
 
 
-async def export_events_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ─── Выгрузка календаря ─────────────────────────────────────
+async def export_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    # Прямая ссылка на Django-эндпоинт
-    export_url = f"http://127.0.0.1:8000/export/events/?user_id={user_id}"
+    from events.models import UserProfile
+    profile = await sync_to_async(UserProfile.objects.get)(telegram_id=user_id)
+
+    keyboard = [
+        [
+            InlineKeyboardButton("CSV", callback_data=f"export_csv_{user_id}_{profile.export_token}"),
+            InlineKeyboardButton("JSON", callback_data=f"export_json_{user_id}_{profile.export_token}"),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-        f"📤 **Выгрузка вашего календаря**\n\n"
-        f"Нажмите на ссылку ниже, чтобы скачать файл CSV с вашими событиями:\n\n"
-        f"[⬇️ Скачать мои события]({export_url})",
-        parse_mode="Markdown",
+        "Выберите формат выгрузки календаря:",
+        reply_markup=reply_markup
+    )
+
+
+async def export_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+    parts = data.split('_')
+    fmt = parts[1]  # csv или json
+    user_id = int(parts[2])
+    token = parts[3]
+
+    if fmt == "csv":
+        url = f"http://127.0.0.1:8000/export/events/?user_id={user_id}&token={token}"
+        ext = "csv"
+    else:
+        url = f"http://127.0.0.1:8000/export/events/json/?user_id={user_id}&token={token}"
+        ext = "json"
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    filename = f"calendar_{user_id}_{today}.{ext}"
+
+    await query.message.reply_text(
+        f"⬇️ Скачать в {ext.upper()}:\n\n{url}\n\nИмя файла: {filename}",
         disable_web_page_preview=True
     )
 
 
 def main():
-    calendar = Calendar() # создаём экземпляр здесь
+    calendar = Calendar()
 
     application = Application.builder() \
         .token(TOKEN) \
@@ -328,21 +369,19 @@ def main():
         .pool_timeout(30) \
         .build()
 
-    # Сохраняем календарь в bot_data — будет доступен во всех обработчиках
     application.bot_data["calendar"] = calendar
 
     create_conv = ConversationHandler(
         entry_points=[CommandHandler("createevent", create_start)],
         states={
-            NAME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, create_name)],
-            DATE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, create_date)],
-            TIME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, create_time)],
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_name)],
+            DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_date)],
+            TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_time)],
             DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_details)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    # Conversation для редактирования
     edit_conv = ConversationHandler(
         entry_points=[CommandHandler("editevent", edit_start)],
         states={
@@ -354,18 +393,18 @@ def main():
 
     appoint_conv = ConversationHandler(
         entry_points=[CommandHandler("appoint", appoint_start)],
-        states={0: [MessageHandler(filters.TEXT & ~filters.COMMAND, appoint_details)]},
+        states={APPOINT_COMMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, appoint_details)]},
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    application.add_handler(CommandHandler("start",       start))
+    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("register", register))
     application.add_handler(create_conv)
     application.add_handler(edit_conv)
-    application.add_handler(CommandHandler("listevents",  list_events))
-    application.add_handler(CommandHandler("readevent",   read_event))
+    application.add_handler(CommandHandler("listevents", list_events))
+    application.add_handler(CommandHandler("readevent", read_event))
     application.add_handler(CommandHandler("deleteevent", delete_event))
-    application.add_handler(CommandHandler("cancel",      cancel))
+    application.add_handler(CommandHandler("cancel", cancel))
     application.add_handler(appoint_conv)
     application.add_handler(CommandHandler("myappointments", my_appointments))
     application.add_handler(CommandHandler("myinvites", my_invites))
@@ -374,7 +413,8 @@ def main():
     application.add_handler(CommandHandler("mycalendar", my_calendar))
     application.add_handler(CommandHandler("publicevent", toggle_public_event))
     application.add_handler(CommandHandler("publicevents", public_events))
-    application.add_handler(CommandHandler("export", export_events_cmd))
+    application.add_handler(CommandHandler("export", export_menu))
+    application.add_handler(CallbackQueryHandler(export_callback, pattern='^export_(csv|json)_'))
 
     print("Многопользовательский Календарь-бот запущен...")
 

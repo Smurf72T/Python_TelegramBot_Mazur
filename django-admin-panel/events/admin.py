@@ -11,11 +11,9 @@ class EventInline(admin.TabularInline):
     can_delete = False
     show_change_link = True
 
-    # Важно: отключаем добавление новых событий через inline
     def has_add_permission(self, request, obj=None):
         return False
 
-    # Фильтруем события по user_id = telegram_id родителя
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if hasattr(request, '_userprofile_inline_parent'):
@@ -34,7 +32,7 @@ class UserStatisticsInline(admin.StackedInline):
     can_delete = False
     fields = ('created_events', 'edited_events', 'cancelled_events', 'updated_at')
     readonly_fields = ('created_events', 'edited_events', 'cancelled_events', 'updated_at')
-    max_num = 1  # только одна запись на пользователя
+    max_num = 1
 
 
 @admin.register(UserProfile)
@@ -50,7 +48,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_id', 'name', 'event_date', 'event_time')
+    list_display = ('id', 'user_id', 'name', 'event_date', 'event_time', 'is_public')
     list_filter = ('event_date', 'user_id', 'is_public')
     search_fields = ('name', 'details')
 
@@ -70,12 +68,22 @@ class BotStatisticsAdmin(admin.ModelAdmin):
 @admin.register(UserStatistics)
 class UserStatisticsAdmin(admin.ModelAdmin):
     list_display = (
-        'user',
+        'get_username',
         'created_events',
         'edited_events',
         'cancelled_events',
         'updated_at'
     )
     readonly_fields = ('created_events', 'edited_events', 'cancelled_events', 'updated_at')
-    search_fields = ('user__telegram_id', 'user__username')
+    search_fields = ('user_telegram_id__telegram_id', 'user_telegram_id__username')
     ordering = ('-updated_at',)
+
+    def get_user_telegram_id(self, obj):
+        return obj.user_telegram_id.telegram_id if obj.user_telegram_id else "—"
+
+    get_user_telegram_id.short_description = "Telegram ID"
+
+    def get_username(self, obj):
+        return obj.user_telegram_id.username if obj.user_telegram_id and obj.user_telegram_id.username else f"tg:{obj.user_telegram_id.telegram_id}"
+
+    get_username.short_description = "Пользователь"

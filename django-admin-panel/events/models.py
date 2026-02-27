@@ -93,10 +93,16 @@ class UserProfile(models.Model):
     last_name   = models.CharField(max_length=255, blank=True, null=True)
     email       = models.CharField(max_length=255, blank=True, null=True)
     registered_at = models.DateTimeField(auto_now_add=True)
+    export_token = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text="Секретный токен для безопасной выгрузки"
+    )
 
     class Meta:
         db_table = 'users'          # используем существующую таблицу
-        managed = False             # Django НЕ будет создавать/менять таблицу
         verbose_name = "Пользователь бота"
         verbose_name_plural = "Пользователи бота"
 
@@ -105,10 +111,11 @@ class UserProfile(models.Model):
 
 
 class UserStatistics(models.Model):
-    user = models.OneToOneField(
+    user_telegram_id = models.OneToOneField(
         'UserProfile',
         on_delete=models.CASCADE,
         primary_key=True,
+        db_column='user_telegram_id',  # ← явно указываем имя столбца в БД
         related_name='statistics'
     )
     created_events   = models.PositiveIntegerField(default=0)
@@ -122,4 +129,4 @@ class UserStatistics(models.Model):
         verbose_name_plural = "Личная статистика пользователей"
 
     def __str__(self):
-        return f"Статистика {self.user}"
+        return f"Статистика {self.user_telegram_id}"
