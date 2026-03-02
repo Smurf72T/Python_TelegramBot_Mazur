@@ -12,7 +12,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN pip install --upgrade pip
 
+# Копируем все файлы проекта
 COPY . .
+
+# Устанавливаем переменную окружения PYTHONPATH для правильного импорта модулей
+ENV PYTHONPATH=/app:/app/django-admin-panel
 
 EXPOSE 8000
 
