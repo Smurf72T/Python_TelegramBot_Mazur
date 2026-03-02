@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 import uuid
+import time
 
 from asgiref.sync import sync_to_async
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -22,6 +23,46 @@ import django
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DJANGO_PATH = os.path.join(BASE_DIR, 'django-admin-panel')
 sys.path.insert(0, DJANGO_PATH)
+
+# Ожидание готовности базы данных перед настройкой Django
+def wait_for_db():
+    """Ожидание готовности базы данных перед подключением Django"""
+    import psycopg2
+    from psycopg2 import OperationalError
+    
+    db_host = os.getenv('DB_HOST_DOCKER', 'db') if os.getenv('RUN_ENV') == 'docker' else os.getenv('DB_HOST', 'localhost')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_user = os.getenv('POSTGRES_USER', 'postgres')
+    db_password = os.getenv('DB_PASSWORD', 'postgres')
+    db_name = os.getenv('POSTGRES_DB', 'calendar_db')
+    
+    max_retries = 30
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            conn = psycopg2.connect(
+                host=db_host,
+                port=db_port,
+                user=db_user,
+                password=db_password,
+                database=db_name,
+                connect_timeout=5
+            )
+            conn.close()
+            print(f"База данных доступна после {attempt + 1} попыток")
+            break
+        except OperationalError as e:
+            if attempt == max_retries - 1:
+                print(f"Не удалось подключиться к базе данных после {max_retries} попыток: {e}")
+                raise
+            print(f"Попытка {attempt + 1}/{max_retries}: База данных не готова, ждем {retry_delay} сек...")
+            time.sleep(retry_delay)
+
+# Ожидаем готовности базы данных в Docker-режиме
+if os.getenv('RUN_ENV') == 'docker':
+    print("Docker-режим: ожидание готовности базы данных...")
+    wait_for_db()
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
 django.setup()

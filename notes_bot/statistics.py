@@ -55,7 +55,7 @@ def increment_user_stat(user_id: int, field: str):
     Поле field может быть: 'created_events', 'edited_events', 'cancelled_events'
     """
     profile, _ = UserProfile.objects.get_or_create(telegram_id=user_id)
-    stat, _ = UserStatistics.objects.get_or_create(user=profile)
+    stat, _ = UserStatistics.objects.get_or_create(user_telegram_id=profile)
     setattr(stat, field, getattr(stat, field) + 1)
     stat.save()
 

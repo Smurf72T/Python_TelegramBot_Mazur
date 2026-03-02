@@ -32,8 +32,8 @@ class Calendar:
             cur = conn.cursor()
             cur.execute(
                 """
-                INSERT INTO users (telegram_id, username)
-                VALUES (%s, %s)
+                INSERT INTO users (telegram_id, username, registered_at)
+                VALUES (%s, %s, CURRENT_TIMESTAMP)
                 ON CONFLICT (telegram_id) DO NOTHING
                 """,
                 (telegram_id, username)
@@ -60,11 +60,11 @@ class Calendar:
             cur = conn.cursor()
             cur.execute(
                 """
-                INSERT INTO events (user_id, name, event_date, event_time, details)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO events (user_id, name, event_date, event_time, details, is_public)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (user_id, name.strip(), d, t, details.strip() or None)
+                (user_id, name.strip(), d, t, details.strip() or None, True)
             )
             event_id = cur.fetchone()[0]
             conn.commit()

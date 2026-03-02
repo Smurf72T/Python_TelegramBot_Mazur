@@ -2,7 +2,37 @@
 # Запускать один раз после изменений в моделях
 
 import psycopg2
+import time
 from db_config import DB_CONFIG
+
+# Ожидание готовности базы данных
+def wait_for_db():
+    """Ожидание готовности базы данных перед подключением"""
+    max_retries = 30
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            conn = psycopg2.connect(
+                host=DB_CONFIG["host"],
+                port=DB_CONFIG["port"],
+                database=DB_CONFIG["database"],
+                user=DB_CONFIG["user"],
+                password=DB_CONFIG["password"],
+                connect_timeout=5
+            )
+            conn.close()
+            print(f"База данных доступна после {attempt + 1} попыток")
+            break
+        except psycopg2.OperationalError as e:
+            if attempt == max_retries - 1:
+                print(f"Не удалось подключиться к базе данных после {max_retries} попыток: {e}")
+                raise
+            print(f"Попытка {attempt + 1}/{max_retries}: База данных не готова, ждем {retry_delay} сек...")
+            time.sleep(retry_delay)
+
+print("Ожидание готовности базы данных...")
+wait_for_db()
 
 conn = psycopg2.connect(
     host=DB_CONFIG["host"],

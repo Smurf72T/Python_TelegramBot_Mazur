@@ -1,0 +1,20 @@
+FROM python:3.12.10-slim
+
+WORKDIR /app
+
+# Установка системных зависимостей, включая curl для healthcheck
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN pip install --upgrade pip
+
+COPY . .
+
+EXPOSE 8000
+
+# Добавляем задержку перед запуском бота для ожидания готовности базы данных
+CMD ["sh", "-c", "sleep 10 && python main.py"]

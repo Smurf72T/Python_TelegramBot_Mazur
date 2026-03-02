@@ -9,8 +9,12 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env файла
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -75,14 +79,20 @@ WSGI_APPLICATION = "admin_panel.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# Автоматическое определение, запущены ли мы внутри Docker
+IS_DOCKER = os.path.exists("/.dockerenv") or "docker" in os.getenv("HOSTNAME", "").lower()
+
+# Определяем RUN_ENV (можно переопределить через переменную окружения)
+RUN_ENV = os.getenv("RUN_ENV") or ("docker" if IS_DOCKER else "local")
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'calendar_bot',               # то же имя, что в db_config.py
-        'USER': 'postgres',                    # то же
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv("DB_NAME", "calendar_bot"),
+        'USER': os.getenv("DB_USER", "postgres"),
+        'PASSWORD': os.getenv("DB_PASSWORD", "postgres"),
+        'HOST': os.getenv("DB_HOST_" + RUN_ENV.upper()),
+        'PORT': os.getenv("DB_PORT", "5432"),
     }
 }
 
