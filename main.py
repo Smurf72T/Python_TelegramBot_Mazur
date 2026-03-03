@@ -1,5 +1,23 @@
-# main.py
-from notes_bot.bot import main
+"""
+main.py — точка входа в приложение
+
+Этот модуль отвечает за инициализацию Django и запуск Telegram-бота.
+Разделяет ответственности между настройкой Django и запуском бота.
+"""
+
+from notes_bot.bot import main as bot_main
+
+
+def main():
+    """
+    Основная функция запуска приложения.
+    
+    Выполняет инициализацию Django и запускает Telegram-бота.
+    Разделяет ответственности между настройкой Django и логикой бота.
+    """
+    bot_main()
+
 
 if __name__ == "__main__":
     main()
+   

@@ -1,4 +1,7 @@
 import asyncio
+import uuid
+
+from asgiref.sync import sync_to_async
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -7,174 +10,63 @@ from telegram.ext import (
     filters,
     ConversationHandler,
     ContextTypes,
+    CallbackQueryHandler,
 )
 
-from db_config import DB_CONFIG
-from .calendar_functions import Calendar
+import os
+import sys
+import django
+
+# Настраиваем Django-окружение (только один раз)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DJANGO_PATH = os.path.join(BASE_DIR, 'django-admin-panel')
+sys.path.insert(0, DJANGO_PATH)
+
+# Ожидание готовности базы данных перед настройкой Django
+from shared_utils.db_utils import wait_for_db
+
+# Импортируем обработчики команд из соответствующих модулей
+from notes_bot.handlers.main_handlers import start, register, cancel, handle_help
+from notes_bot.handlers.event_handlers import (
+    create_start, create_name, create_date, create_time, create_details,
+    read_event, delete_event, edit_start, edit_choose_field, edit_set_value, list_events
+)
+from notes_bot.handlers.appointment_handlers import (
+    appoint_start, appoint_details, my_appointments, my_invites,
+    confirm_appointment, decline_appointment
+)
+from notes_bot.handlers.calendar_handlers import (
+    my_calendar, toggle_public_event, public_events
+)
+from notes_bot.handlers.export_handlers import export_menu, export_callback
+
+# Ожидаем готовности базы данных в Docker-режиме
+if os.getenv('RUN_ENV') == 'docker':
+    print("Docker-режим: ожидание готовности базы данных...")
+    wait_for_db()
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
+django.setup()
+
+from notes_bot.statistics import increment_stat, get_user_stats
+from notes_bot.calendar_functions import Calendar
 
 try:
     from secrets import TOKEN
 except ImportError:
-    import os
     TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     if not TOKEN:
         raise ValueError("Токен не найден")
 
-
 # Состояния
 NAME, DATE, TIME, DETAILS = range(4)
 EDIT_FIELD, EDIT_VALUE = range(2)
+APPOINT_COMMENT = 0
 
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Календарь-бот (многопользовательский)\n\n"
-        "Команды:\n"
-        "/register       — зарегистрироваться\n"
-        "/createevent    — добавить событие\n"
-        "/listevents     — ваши события\n"
-        "/readevent <id> — посмотреть событие\n"
-        "/editevent <id> — изменить событие\n"
-        "/deleteevent <id> — удалить событие\n"
-        "/cancel         — отменить"
-    )
-
-
-async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    username = update.effective_user.username
-    cal = context.bot_data["calendar"]
-    result = cal.register_user(user_id, username)
-    await update.message.reply_text(result)
-
-
-# ─── Создание события ───────────────────────────────────────
-async def create_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Название события?")
-    return NAME
-
-
-async def create_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["name"] = update.message.text.strip()
-    await update.message.reply_text("Дата (ГГГГ-ММ-ДД)?")
-    return DATE
-
-
-async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["date"] = update.message.text.strip()
-    await update.message.reply_text("Время (ЧЧ:ММ)?")
-    return TIME
-
-
-async def create_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["time"] = update.message.text.strip()
-    await update.message.reply_text("Описание (можно пустым):")
-    return DETAILS
-
-
-async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    name  = context.user_data.get("name", "").strip()
-    date  = context.user_data.get("date", "").strip()
-    time  = context.user_data.get("time", "").strip()
-    descr = update.message.text.strip()
-
-    if not name or not date or not time:
-        await update.message.reply_text("Не заполнены обязательные поля.")
-        context.user_data.clear()
-        return ConversationHandler.END
-
-    user_id = update.effective_user.id
-    cal = context.bot_data["calendar"]
-    result = cal.create_event(user_id, name, date, time, descr)
-    await update.message.reply_text(result)
-
-    context.user_data.clear()
-    return ConversationHandler.END
-
-
-# ─── Остальные команды с user_id ─────────────────────────────
-async def list_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    cal = context.bot_data["calendar"]
-    await update.message.reply_text(cal.list_events(user_id))
-
-
-async def read_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Напишите: /readevent 123")
-        return
-    user_id = update.effective_user.id
-    cal = context.bot_data["calendar"]
-    await update.message.reply_text(cal.read_event(user_id, context.args[0]))
-
-
-async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Напишите: /deleteevent 123")
-        return
-    user_id = update.effective_user.id
-    cal = context.bot_data["calendar"]
-    await update.message.reply_text(cal.delete_event(user_id, context.args[0]))
-
-
-# ─── Редактирование события (по одному полю) ─────────────────
-async def edit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Напишите: /editevent 123")
-        return ConversationHandler.END
-
-    eid = context.args[0].strip()
-    context.user_data["edit_id"] = eid
-
-    await update.message.reply_text(
-        "Что меняем?\n"
-        "1 = название\n"
-        "2 = дата\n"
-        "3 = время\n"
-        "4 = описание\n"
-        "Введите цифру:"
-    )
-    return EDIT_FIELD
-
-
-async def edit_choose_field(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    field = update.message.text.strip()
-    if field not in ("1", "2", "3", "4"):
-        await update.message.reply_text("Только цифры 1–4")
-        return ConversationHandler.END
-
-    context.user_data["edit_field"] = field
-    await update.message.reply_text("Новое значение:")
-    return EDIT_VALUE
-
-
-async def edit_set_value(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    eid   = context.user_data.get("edit_id")
-    field = context.user_data.get("edit_field")
-    value = update.message.text.strip()
-
-    if not eid or not field:
-        await update.message.reply_text("Ошибка данных. Начните заново /editevent")
-        context.user_data.clear()
-        return ConversationHandler.END
-
-    mapping = {"1": "name", "2": "date", "3": "time", "4": "details"}
-    user_id = update.effective_user.id
-    cal = context.bot_data["calendar"]
-    result = cal.edit_event(user_id, eid, **{mapping[field]: value})
-    await update.message.reply_text(result)
-
-    context.user_data.clear()
-    return ConversationHandler.END
-
-
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
-    await update.message.reply_text("Действие отменено.")
-
+# Вспомогательные функции перенесены в notes_bot.utils.helpers
 
 def main():
-    calendar = Calendar()                           # создаём экземпляр здесь
+    calendar = Calendar()
 
     application = Application.builder() \
         .token(TOKEN) \
@@ -186,21 +78,19 @@ def main():
         .pool_timeout(30) \
         .build()
 
-    # Сохраняем календарь в bot_data — будет доступен во всех обработчиках
     application.bot_data["calendar"] = calendar
 
     create_conv = ConversationHandler(
         entry_points=[CommandHandler("createevent", create_start)],
         states={
-            NAME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, create_name)],
-            DATE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, create_date)],
-            TIME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, create_time)],
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_name)],
+            DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_date)],
+            TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_time)],
             DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_details)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    # Conversation для редактирования
     edit_conv = ConversationHandler(
         entry_points=[CommandHandler("editevent", edit_start)],
         states={
@@ -210,14 +100,31 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    application.add_handler(CommandHandler("start",       start))
+    appoint_conv = ConversationHandler(
+        entry_points=[CommandHandler("appoint", appoint_start)],
+        states={APPOINT_COMMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, appoint_details)]},
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
+
+    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("register", register))
+    application.add_handler(CommandHandler("help", handle_help))
     application.add_handler(create_conv)
     application.add_handler(edit_conv)
-    application.add_handler(CommandHandler("listevents",  list_events))
-    application.add_handler(CommandHandler("readevent",   read_event))
+    application.add_handler(CommandHandler("listevents", list_events))
+    application.add_handler(CommandHandler("readevent", read_event))
     application.add_handler(CommandHandler("deleteevent", delete_event))
-    application.add_handler(CommandHandler("cancel",      cancel))
+    application.add_handler(CommandHandler("cancel", cancel))
+    application.add_handler(appoint_conv)
+    application.add_handler(CommandHandler("myappointments", my_appointments))
+    application.add_handler(CommandHandler("myinvites", my_invites))
+    application.add_handler(CommandHandler("confirm", confirm_appointment))
+    application.add_handler(CommandHandler("decline", decline_appointment))
+    application.add_handler(CommandHandler("mycalendar", my_calendar))
+    application.add_handler(CommandHandler("publicevent", toggle_public_event))
+    application.add_handler(CommandHandler("publicevents", public_events))
+    application.add_handler(CommandHandler("export", export_menu))
+    application.add_handler(CallbackQueryHandler(export_callback, pattern='^export_(csv|json)_'))
 
     print("Многопользовательский Календарь-бот запущен...")
 
