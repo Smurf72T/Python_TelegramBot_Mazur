@@ -5,10 +5,14 @@
 в разных частях приложения (бот, инициализация, администрирование).
 """
 
+import os
 import time
 import psycopg2
 from psycopg2 import OperationalError
-from db_config import DB_CONFIG
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env
+load_dotenv()
 
 
 def wait_for_db():
@@ -36,14 +40,21 @@ def wait_for_db():
     max_retries = 30
     retry_delay = 2
     
+    # Получаем настройки БД из переменных окружения
+    db_host = os.getenv("DB_HOST_LOCAL", "localhost")
+    db_port = os.getenv("DB_PORT", "5432")
+    db_name = os.getenv("DB_NAME", "calendar_db")
+    db_user = os.getenv("DB_USER", "postgres")
+    db_password = os.getenv("DB_PASSWORD", "postgres")
+    
     for attempt in range(max_retries):
         try:
             conn = psycopg2.connect(
-                host=DB_CONFIG["host"],
-                port=DB_CONFIG["port"],
-                database=DB_CONFIG["database"],
-                user=DB_CONFIG["user"],
-                password=DB_CONFIG["password"],
+                host=db_host,
+                port=db_port,
+                database=db_name,
+                user=db_user,
+                password=db_password,
                 connect_timeout=5
             )
             conn.close()

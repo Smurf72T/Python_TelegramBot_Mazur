@@ -13,12 +13,17 @@ init_db.py — скрипт инициализации/обновления ст
 
 Зависимости:
 - psycopg2: драйвер PostgreSQL для Python
-- db_config: модуль с настройками подключения к БД
+- python-dotenv: загрузка переменных окружения из .env
 """
 
+import os
 import psycopg2
 import time
-from db_config import DB_CONFIG
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
+
 from shared_utils.db_utils import wait_for_db
 
 
@@ -47,14 +52,20 @@ def wait_for_db():
     max_retries = 30
     retry_delay = 2
     
+    db_host = os.getenv('DB_HOST_LOCAL', 'localhost')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_name = os.getenv('DB_NAME', 'calendar_db')
+    db_user = os.getenv('DB_USER', 'postgres')
+    db_password = os.getenv('DB_PASSWORD', 'postgres')
+    
     for attempt in range(max_retries):
         try:
             conn = psycopg2.connect(
-                host=DB_CONFIG["host"],
-                port=DB_CONFIG["port"],
-                database=DB_CONFIG["database"],
-                user=DB_CONFIG["user"],
-                password=DB_CONFIG["password"],
+                host=db_host,
+                port=db_port,
+                database=db_name,
+                user=db_user,
+                password=db_password,
                 connect_timeout=5
             )
             conn.close()
@@ -77,12 +88,18 @@ wait_for_db()
 
 # Шаг 2: Установка соединения с базой данных
 # Используем autocommit=True для автоматического применения изменений
+db_host = os.getenv('DB_HOST_LOCAL', 'localhost')
+db_port = os.getenv('DB_PORT', '5432')
+db_name = os.getenv('DB_NAME', 'calendar_db')
+db_user = os.getenv('DB_USER', 'postgres')
+db_password = os.getenv('DB_PASSWORD', 'postgres')
+
 conn = psycopg2.connect(
-    host=DB_CONFIG["host"],
-    port=DB_CONFIG["port"],
-    database=DB_CONFIG["database"],
-    user=DB_CONFIG["user"],
-    password=DB_CONFIG["password"]
+    host=db_host,
+    port=db_port,
+    database=db_name,
+    user=db_user,
+    password=db_password
 )
 conn.autocommit = True
 cur = conn.cursor()
