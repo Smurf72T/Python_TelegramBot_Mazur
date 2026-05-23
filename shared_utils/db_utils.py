@@ -40,8 +40,15 @@ def wait_for_db():
     max_retries = 30
     retry_delay = 2
     
+    # Определяем окружение
+    run_env = os.getenv("RUN_ENV", "local")
+    
     # Получаем настройки БД из переменных окружения
-    db_host = os.getenv("DB_HOST_LOCAL", "localhost")
+    if run_env == "docker":
+        db_host = os.getenv("DB_HOST_DOCKER", "db")
+    else:
+        db_host = os.getenv("DB_HOST_LOCAL", "localhost")
+    
     db_port = os.getenv("DB_PORT", "5432")
     db_name = os.getenv("DB_NAME", "calendar_db")
     db_user = os.getenv("DB_USER", "postgres")

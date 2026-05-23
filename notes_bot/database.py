@@ -20,7 +20,9 @@ class DatabasePool:
         Args:
             config (Optional[Dict[str, Any]]): Словарь с параметрами подключения.
                 Если не передан, параметры берутся из переменных окружения:
-                - DB_HOST_LOCAL: хост базы данных
+                - RUN_ENV: 'docker' или 'local'
+                - DB_HOST_DOCKER: хост БД в Docker (по умолчанию 'db')
+                - DB_HOST_LOCAL: хост БД локально (по умолчанию 'localhost')
                 - DB_PORT: порт
                 - DB_NAME: имя базы данных
                 - DB_USER: имя пользователя
@@ -29,8 +31,15 @@ class DatabasePool:
                 - DB_MAXCONN: макс. количество соединений
         """
         if config is None:
+            run_env = os.getenv('RUN_ENV', 'local')
+            
+            if run_env == 'docker':
+                db_host = os.getenv('DB_HOST_DOCKER', 'db')
+            else:
+                db_host = os.getenv('DB_HOST_LOCAL', 'localhost')
+            
             config = {
-                'host': os.getenv('DB_HOST_LOCAL', 'localhost'),
+                'host': db_host,
                 'port': os.getenv('DB_PORT', '5432'),
                 'database': os.getenv('DB_NAME', 'calendar_db'),
                 'user': os.getenv('DB_USER', 'postgres'),

@@ -1,5 +1,7 @@
 import asyncio
 import uuid
+import os
+import sys
 
 from asgiref.sync import sync_to_async
 from telegram import Update
@@ -13,8 +15,10 @@ from telegram.ext import (
     CallbackQueryHandler,
 )
 
-import os
-import sys
+# Загружаем переменные окружения ПЕРЕД любыми импортами
+from dotenv import load_dotenv
+load_dotenv()
+
 import django
 
 # Настраиваем Django-окружение (только один раз)
@@ -22,7 +26,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DJANGO_PATH = os.path.join(BASE_DIR, 'django-admin-panel')
 sys.path.insert(0, DJANGO_PATH)
 
-# Ожидание готовности базы данных перед настройкой Django
+# Ожидание готовности базы данных (после загрузки .env)
 from shared_utils.db_utils import wait_for_db
 
 # Импортируем обработчики команд из соответствующих модулей
