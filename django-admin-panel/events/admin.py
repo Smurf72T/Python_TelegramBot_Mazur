@@ -172,7 +172,7 @@ class UserProfileAdmin(admin.ModelAdmin):
         Returns:
             QuerySet: Профили пользователей с предзагруженными связанными объектами
         """
-        return super().get_queryset(request).prefetch_related('events', 'userstatistics')
+        return super().get_queryset(request).prefetch_related('events', 'statistics')
 
 
 @admin.register(Event)
