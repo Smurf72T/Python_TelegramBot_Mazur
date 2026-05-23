@@ -106,7 +106,7 @@ class Calendar:
         """
         return self.event_crud.read_event(user_id, event_id)
 
-    def edit_event(self, user_id: int, event_id: str, name=None, date=None, time=None, details=None) -> str:
+    def edit_event(self, user_id: int, event_id: str, name=None, new_date=None, new_time=None, details=None) -> str:
         """
         Редактирует существующее событие.
 
@@ -116,14 +116,14 @@ class Calendar:
             user_id (int): ID пользователя
             event_id (str): ID события для редактирования
             name (optional): Новое название
-            date (optional): Новая дата
-            time (optional): Новое время
+            new_date (optional): Новая дата
+            new_time (optional): Новое время
             details (optional): Новые детали
 
         Returns:
             str: Сообщение об успешном редактировании или ошибке
         """
-        return self.event_crud.edit_event(user_id, event_id, name, date, time, details)
+        return self.event_crud.edit_event(user_id, event_id, name, new_date, new_time, details)
 
     def delete_event(self, user_id: int, event_id: str) -> str:
         """

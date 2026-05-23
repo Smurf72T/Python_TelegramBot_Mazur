@@ -140,7 +140,7 @@ class EventCRUD:
             cur.close()
             self.db_pool.put_connection(conn)
 
-    def edit_event(self, user_id: int, event_id: str, name=None, date=None, time=None, details=None) -> str:
+    def edit_event(self, user_id: int, event_id: str, name=None, new_date=None, new_time=None, details=None) -> str:
         """
         Редактирует существующее событие.
         
@@ -151,14 +151,14 @@ class EventCRUD:
             user_id (int): ID пользователя
             event_id (str): ID события для редактирования
             name (optional): Новое название
-            date (optional): Новая дата
-            time (optional): Новое время
+            new_date (optional): Новая дата
+            new_time (optional): Новое время
             details (optional): Новые детали
         
         Returns:
             str: Сообщение об успешном редактировании или ошибке
         """
-        if all(v is None for v in (name, date, time, details)):
+        if all(v is None for v in (name, new_date, new_time, details)):
             return "Нечего изменять"
 
         conn = self.db_pool.get_connection()
@@ -170,16 +170,16 @@ class EventCRUD:
             if name is not None:
                 updates.append("name = %s")
                 params.append(name.strip())
-            if date is not None:
+            if new_date is not None:
                 try:
-                    d = date.fromisoformat(date)
+                    d = date.fromisoformat(new_date)
                     updates.append("event_date = %s")
                     params.append(d)
                 except ValueError:
                     return "❌ Неверный формат даты"
-            if time is not None:
+            if new_time is not None:
                 try:
-                    t = time.fromisoformat(time)
+                    t = time.fromisoformat(new_time)
                     updates.append("event_time = %s")
                     params.append(t)
                 except ValueError:

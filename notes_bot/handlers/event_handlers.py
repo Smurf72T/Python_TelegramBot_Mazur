@@ -185,7 +185,7 @@ async def edit_set_value(update: Update, context: ContextTypes.DEFAULT_TYPE):
         clear_user_data(context)
         return ConversationHandler.END
 
-    mapping = {"1": "name", "2": "date", "3": "time", "4": "details"}
+    mapping = {"1": "name", "2": "new_date", "3": "new_time", "4": "details"}
     user_id, cal = get_user_and_calendar(update, context)
     result = cal.edit_event(user_id, eid, **{mapping[field]: value})
     await update.message.reply_text(result)
