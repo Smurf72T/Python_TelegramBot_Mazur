@@ -57,39 +57,42 @@
 
 ### Локальный запуск
 
-1. Установите зависимости:
-   ```bash
-   pip install -r requirements.txt
-   ```
+#### 1. Подготовка базы данных
+```bash
+# Запуск PostgreSQL (если нет локальной БД)
+docker-compose up -d db
 
-2. Настройте `.env` (см. выше)
+# Применение миграций Django
+cd django-admin-panel
+python manage.py migrate
 
-3. Запустите PostgreSQL (локально или через Docker):
-   ```bash
-   docker-compose up -d db
-   ```
+# Создание суперпользователя для админки
+python manage.py createsuperuser
+```
 
-4. Примените миграции Django:
-   ```bash
-   cd django-admin-panel
-   python manage.py migrate
-   ```
+#### 2. Настройка переменных окружения
+Убедитесь, что в файле `.env` (в корне проекта) указаны:
+- `TELEGRAM_BOT_TOKEN` — токен от BotFather
+- `DB_USER` и `DB_PASSWORD` — данные для подключения к вашей локальной PostgreSQL (по умолчанию: `postgres`/`postgres`)
+- `SECRET_KEY` — произвольная строка
 
-5. Создайте суперпользователя:
-   ```bash
-   python manage.py createsuperuser
-   ```
+#### 3. Запуск компонентов
 
-6. Запустите бота:
-   ```bash
-   python main.py
-   ```
+**Окно 1: Django Admin Panel**
+```bash
+cd django-admin-panel
+python manage.py runserver
+```
+Доступ к админке: http://localhost:8000/admin
 
-7. Запустите Django сервер (в отдельном терминале):
-   ```bash
-   cd django-admin-panel
-   python manage.py runserver
-   ```
+**Окно 2: Telegram-бот**
+```bash
+# В корне проекта
+python main.py
+```
+Бот запустится и будет обрабатывать команды в Telegram.
+
+> **Примечание:** Для локального запуска бота необходимо, чтобы путь к проекту был в `PYTHONPATH` или скрипт запускался из корня проекта (как в примере выше).
 
 ## 📱 Команды бота
 
