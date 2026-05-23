@@ -1,0 +1,25 @@
+# Telegram Bot
+python-telegram-bot==21.0
+
+# Django и REST Framework
+django==5.0.2
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+
+# PostgreSQL
+psycopg2-binary==2.9.9
+psycopg2==2.9.9
+
+# Асинхронность
+asgiref==3.7.2
+
+# Окружение
+python-dotenv==1.0.0
+
+# Тестирование
+pytest==8.0.0
+pytest-django==4.7.0
+
+# Утилиты
+certifi==2024.2.2
+charset-normalizer==3.3.2
