@@ -173,11 +173,17 @@ services:
     
     # Команда запуска тестов
     command: >
-      sh -c "cd django-admin-panel && python -m pytest -v --reuse-db"
+      sh -c "cd django-admin-panel && python -m pytest tests/ -v --ds=admin_panel.settings"
     
     # Загружаем переменные окружения из .env
     env_file:
       - .env
+    
+    # Дополнительные переменные окружения для Docker
+    environment:
+      - RUN_ENV=docker
+      - DB_HOST_DOCKER=db
+      - DB_HOST_LOCAL=localhost
     
     # Зависимости от других сервисов
     depends_on:

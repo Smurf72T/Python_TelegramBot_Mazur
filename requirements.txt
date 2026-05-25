@@ -16,8 +16,9 @@ asgiref>=3.7.2
 python-dotenv==1.0.0
 
 # Тестирование
-pytest==8.0.0
+pytest==8.2.0
 pytest-django==4.7.0
+pytest-asyncio==0.24.0
 
 # Утилиты
 certifi==2024.2.2
