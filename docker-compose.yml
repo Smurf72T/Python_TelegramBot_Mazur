@@ -101,23 +101,18 @@ services:
     ports:
       - "8000:8000"  # Django доступен на http://localhost:8000
     
+    # Health check для проверки доступности Django (временно отключён из-за проблем с экранированием в Windows)
+    # healthcheck:
+    #   test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/')\""]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
+    
     # Подключение volumes для разработки (hot reload)
     volumes:
       # Монтируем директорию с кодом для отслеживания изменений
       - ./django-admin-panel:/app
-    
-    # Health check для проверки доступности Django
-    healthcheck:
-      # Проверка: curl должен успешно получить главную страницу админки
-      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/"]
-      # Интервал проверки (30 секунд)
-      interval: 30s
-      # Тайм-аут (10 секунд)
-      timeout: 10s
-      # Количество неудачных попыток (3)
-      retries: 3
-      # Период ожидания перед началом проверок (40 секунд на запуск)
-      start_period: 40s
     
     # Команда запуска (переопределяет CMD из Dockerfile)
     command: >
@@ -156,6 +151,7 @@ services:
       - RUN_ENV=docker
       - DB_HOST_DOCKER=db
       - DB_HOST_LOCAL=localhost
+      - ANYIO_BACKEND=asyncio
     
     # Подключение volumes для разработки (hot reload)
     volumes:
