@@ -9,11 +9,11 @@ from events.models import UserProfile, Event
 # Добавляем путь к django-admin-panel для импорта admin_panel
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'django-admin-panel'))
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+# @pytest.fixture(scope="session")
+# def event_loop():
+#     loop = asyncio.get_event_loop_policy().new_event_loop()
+#     yield loop
+#     loop.close()
 
 @pytest.fixture
 def django_db_setup(django_db_setup, django_db_blocker):
