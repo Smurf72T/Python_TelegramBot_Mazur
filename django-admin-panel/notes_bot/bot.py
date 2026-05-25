@@ -14,6 +14,7 @@ from telegram.ext import (
     ContextTypes,
     CallbackQueryHandler,
 )
+from telegram.request import AIOHTTPRequest
 
 # Загружаем переменные окружения ПЕРЕД любыми импортами
 from dotenv import load_dotenv
@@ -72,14 +73,17 @@ APPOINT_COMMENT = 0
 def main():
     calendar = Calendar()
 
+    # Создаём объект Request с aiohttp вместо httpx
+    request = AIOHTTPRequest(
+        connection_pool_size=10,
+        connect_timeout=30.0,
+        read_timeout=30.0,
+        write_timeout=30.0,
+    )
+
     application = Application.builder() \
         .token(TOKEN) \
-        .connection_pool_size(10) \
-        .get_updates_connection_pool_size(10) \
-        .read_timeout(30) \
-        .write_timeout(30) \
-        .connect_timeout(30) \
-        .pool_timeout(30) \
+        .request(request) \
         .build()
 
     application.bot_data["calendar"] = calendar
@@ -133,10 +137,7 @@ def main():
     print("Многопользовательский Календарь-бот запущен...")
 
     try:
-        # Создаём event loop для Python 3.14+
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Используем стандартный run_polling без ручного создания event loop
         application.run_polling(allowed_updates=Update.ALL_TYPES)
     finally:
         calendar.close()
