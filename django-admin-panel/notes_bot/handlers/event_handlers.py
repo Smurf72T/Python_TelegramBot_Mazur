@@ -129,7 +129,14 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     user_id, cal = get_user_and_calendar(update, context)
-    await update.message.reply_text(cal.delete_event(user_id, context.args[0]))
+    result = cal.delete_event(user_id, context.args[0])
+    
+    # Проверяем, вызван ли обработчик через callback-кнопку
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(result)
+    elif update.message:
+        await update.message.reply_text(result)
 
 
 
