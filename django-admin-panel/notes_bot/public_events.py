@@ -221,7 +221,7 @@ class PublicEventsManager:
             query = """
                     SELECT e.id, e.name, e.event_date, e.event_time, e.details, u.username
                     FROM events e
-                             LEFT JOIN users u ON e.user_id = u.telegram_id
+                             LEFT JOIN events_userprofile u ON e.user_id = u.telegram_id
                     WHERE e.is_public = TRUE \
                     """
             params = []
