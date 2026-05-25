@@ -93,6 +93,10 @@ DATABASES = {
         'PASSWORD': os.getenv("DB_PASSWORD", "postgres"),
         'HOST': os.getenv("DB_HOST_" + RUN_ENV.upper()),
         'PORT': os.getenv("DB_PORT", "5432"),
+        # Отключаем сериализацию для тестовой БД
+        'TEST': {
+            'SERIALIZE': False,
+        },
     }
 }
 
@@ -137,3 +141,12 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# =============================================================================
+# Настройки для тестирования
+# =============================================================================
+# Отключаем сериализацию тестовой базы данных, так как используем существующие таблицы
+TEST = {
+    'SERIALIZE': False,
+}
