@@ -79,7 +79,7 @@ class UserProfile(models.Model):
         """Метаданные модели UserProfile."""
         db_table = 'users'  # Используем существующую таблицу в БД
         verbose_name = "Пользователь бота"
-        verbose_name_plural = "Пользователи бота"
+        verbose_name_plural = "Пользователи б��та"
         # Сортировка по дате регистрации (сначала новые)
         ordering = ['-registered_at']
 
