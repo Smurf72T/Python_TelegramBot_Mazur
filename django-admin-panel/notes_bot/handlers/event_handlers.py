@@ -27,24 +27,76 @@ EDIT_FIELD, EDIT_VALUE = range(2)
 # Функции вынесены в notes_bot.utils.helpers
 
 
-async def create_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def create_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Начинает процесс создания нового события.
+
+    Запрашивает у пользователя название события и переводит диалог
+    в состояние ожидания ввода названия.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Returns:
+        int: Состояние NAME для ожидания ввода названия
+
+    Command usage:
+        /createevent
+    """
     await update.message.reply_text("Название события?")
     return NAME
 
 
-async def create_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def create_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Обрабатывает ввод названия события.
+
+    Сохраняет название в user_data и запрашивает дату события.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Returns:
+        int: Состояние DATE для ожидания ввода даты
+    """
     context.user_data["name"] = update.message.text.strip()
     await update.message.reply_text("Дата (ГГГГ-ММ-ДД)?")
     return DATE
 
 
-async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Обрабатывает ввод даты события.
+
+    Сохраняет дату в user_data и запрашивает время события.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Returns:
+        int: Состояние TIME для ожидания ввода времени
+    """
     context.user_data["date"] = update.message.text.strip()
     await update.message.reply_text("Время (ЧЧ:ММ)?")
     return TIME
 
 
-async def create_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def create_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Обрабатывает ввод времени события.
+
+    Сохраняет время в user_data и запрашивает описание события.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Returns:
+        int: Состояние DETAILS для ожидания ввода описания
+    """
     context.user_data["time"] = update.message.text.strip()
     await update.message.reply_text("Описание (можно пустым):")
     return DETAILS
@@ -99,17 +151,43 @@ async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def list_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Показывает список всех событий пользователя.
-    Использует вспомогательную функцию get_user_and_calendar для устранения дублирования.
+
+    Получает Telegram ID пользователя и использует менеджер календаря
+    для получения отформатированного списка всех событий.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Command usage:
+        /listevents
+
+    Returns:
+        None: Отправляет сообщение со списком событий или сообщением об их отсутствии
     """
     user_id, cal = get_user_and_calendar(update, context)
     await update.message.reply_text(cal.list_events(user_id))
 
 
-
 async def read_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Показывает детальную информацию о конкретном событии.
-    Проверяет наличие аргументов с помощью require_args.
+
+    Проверяет наличие event_id в аргументах команды и получает подробную
+    информацию о событии через менеджер календаря.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды с аргументами (event_id)
+
+    Command usage:
+        /readevent <event_id>
+
+    Example:
+        /readevent 123
+
+    Returns:
+        None: Отправляет сообщение с деталями события или ошибкой
     """
     if not require_args(context, 1):
         await send_usage_message(update, "readevent", "/readevent 123")
@@ -122,7 +200,23 @@ async def read_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Удаляет событие по идентификатору.
-    Проверяет наличие аргументов с помощью require_args.
+
+    Проверяет наличие event_id в аргументах команды, удаляет событие
+    через менеджер календаря и отправляет результат пользователю.
+    Поддерживает работу как с текстовыми командами, так и с callback-кнопками.
+
+    Args:
+        update: Объект обновления от Telegram (может быть message или callback_query)
+        context: Контекст команды с аргументами (event_id)
+
+    Command usage:
+        /deleteevent <event_id>
+
+    Example:
+        /deleteevent 123
+
+    Returns:
+        None: Отправляет сообщение об успешном удалении или ошибке
     """
     if not require_args(context, 1):
         await send_usage_message(update, "deleteevent", "/deleteevent 123")
@@ -140,10 +234,30 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
-async def edit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def edit_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
     Начинает процесс редактирования события.
-    Проверяет наличие аргументов и сохраняет ID события в user_data.
+
+    Проверяет наличие event_id в аргументах команды, сохраняет его в user_data
+    и отображает меню выбора поля для редактирования.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды с аргументами (event_id)
+
+    Returns:
+        int: Состояние EDIT_FIELD для ожидания выбора поля или ConversationHandler.END при ошибке
+
+    Command usage:
+        /editevent <event_id>
+
+    Example:
+        /editevent 123
+
+    Process:
+        1. Проверяет наличие event_id
+        2. Сохраняет ID в user_data
+        3. Отображает меню выбора поля (1-4)
     """
     if not require_args(context, 1):
         await send_usage_message(update, "editevent", "/editevent 123")
@@ -163,10 +277,24 @@ async def edit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return EDIT_FIELD
 
 
-async def edit_choose_field(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def edit_choose_field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
     Обрабатывает выбор поля для редактирования.
-    Проверяет корректность введенной цифры.
+
+    Проверяет корректность введенной цифры (1-4), сохраняет выбор в user_data
+    и запрашивает новое значение у пользователя.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды с сохранённым event_id
+
+    Returns:
+        int: Состояние EDIT_VALUE для ожидания нового значения или ConversationHandler.END при ошибке
+
+    Process:
+        1. Проверяет, что введена цифра от 1 до 4
+        2. Сохраняет выбор поля в user_data
+        3. Запрашивает новое значение
     """
     field = update.message.text.strip()
     if field not in ("1", "2", "3", "4"):

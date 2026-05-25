@@ -1,3 +1,11 @@
+"""
+Модуль main_handlers.py — основные обработчики команд бота
+
+Содержит обработчики основных команд: /start, /register, /cancel, /help.
+Эти обработчики обеспечивают первичное взаимодействие с пользователем,
+регистрацию и предоставление справочной информации.
+"""
+
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 
@@ -13,7 +21,29 @@ from notes_bot.utils.helpers import (
 
 @send_typing_action
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик команды /start"""
+    """
+    Обработчик команды /start — первая точка входа в бота.
+
+    Проверяет наличие пользователя в базе данных. Если пользователь новый —
+    автоматически создаёт его профиль и предлагает заполнить дополнительную информацию.
+    Если пользователь уже существует — приветствует его.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Returns:
+        None: Отправляет приветственное сообщение
+
+    Command usage:
+        /start
+
+    Process:
+        1. Получает данные пользователя из update
+        2. Проверяет наличие в базе данных
+        3. Если нет — создаёт новый профиль
+        4. Отправляет приветственное сообщение с инструкциями
+    """
     user = update.effective_user
     context_user = await get_user_by_telegram_id(user.id)
 
@@ -37,7 +67,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 @send_typing_action
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик команды /register для регистрации пользователя"""
+    """
+    Обработчик команды /register — заполнение профиля пользователя.
+
+    Получает или создаёт профиль пользователя, заполняет недостающие данные
+    (имя, фамилию) из данных Telegram и сохраняет изменения.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Returns:
+        None: Отправляет сообщение об успешной регистрации или что профиль уже заполнен
+
+    Command usage:
+        /register
+
+    Process:
+        1. Получает или создаёт профиль пользователя
+        2. Проверяет заполненность имени и фамилии
+        3. Заполняет недостающие поля из данных Telegram
+        4. Сохраняет изменения в базе данных
+    """
     user = update.effective_user
 
     # Получаем или создаем пользователя
@@ -75,7 +126,26 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 @send_typing_action
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Обработчик команды /cancel для отмены текущего действия"""
+    """
+    Обработчик команды /cancel — отмена текущего диалога/действия.
+
+    Используется в ConversationHandler для выхода из текущего диалога
+    и очистки временных данных пользователя.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Returns:
+        int: ConversationHandler.END для завершения диалога
+
+    Command usage:
+        /cancel
+
+    Process:
+        1. Отправляет сообщение об отмене действия
+        2. Возвращает ConversationHandler.END для завершения диалога
+    """
     await update.message.reply_text(
         'Действие отменено. Если нужно что-то сделать - просто скажи!'
     )
@@ -85,8 +155,24 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 @send_typing_action
 async def handle_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Обработчик команды /help
-    Отправляет сообщение с описанием всех доступных команд бота
+    Обработчик команды /help — отображение справки по командам бота.
+
+    Формирует и отправляет пользователю полное описание всех доступных команд
+    с кратким описанием назначения каждой команды.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Returns:
+        None: Отправляет сообщение со списком всех команд
+
+    Command usage:
+        /help
+
+    Process:
+        1. Формирует текст справки со всеми командами
+        2. Отправляет сообщение пользователю
     """
     help_text = (
         "/start - Начать работу с ботом\n"

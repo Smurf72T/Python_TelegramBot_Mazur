@@ -20,7 +20,21 @@ from notes_bot.utils.helpers import get_user_and_calendar, require_args, send_us
 async def my_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Показывает личный кабинет пользователя со статистикой, событиями и публичными событиями.
-    Использует вспомогательную функцию get_user_and_calendar для устранения дублирования.
+
+    Формирует комплексное представление о деятельности пользователя:
+    - Личная статистика (в разработке)
+    - Список личных событий
+    - Список публичных событий других пользователей
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Command usage:
+        /mycalendar
+
+    Returns:
+        None: Отправляет сообщение с полным личным кабинетом
     """
     user_id, cal = get_user_and_calendar(update, context)
 
@@ -42,7 +56,22 @@ async def my_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def toggle_public_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Переключает статус публичности события (публичное/приватное).
-    Проверяет наличие аргументов с помощью require_args.
+
+    Меняет флаг is_public у указанного события пользователя.
+    Если событие было публичным - становится приватным и наоборот.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды с аргументами (event_id)
+
+    Command usage:
+        /publicevent <event_id>
+
+    Example:
+        /publicevent 123
+
+    Returns:
+        None: Отправляет сообщение об успешном изменении или ошибке
     """
     if not require_args(context, 1):
         await send_usage_message(update, "publicevent", "/publicevent <id>")
@@ -57,8 +86,20 @@ async def toggle_public_event(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def public_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Показывает все публичные события.
-    Использует вспомогательную функцию get_user_and_calendar для устранения дублирования.
+    Показывает все публичные события других пользователей.
+
+    Получает список всех событий, у которых флаг is_public установлен в True.
+    Позволяет пользователям видеть события, которые другие сделали общедоступными.
+
+    Args:
+        update: Объект обновления от Telegram
+        context: Контекст команды
+
+    Command usage:
+        /publicevents
+
+    Returns:
+        None: Отправляет сообщение со списком публичных событий или сообщением об их отсутствии
     """
     _, cal = get_user_and_calendar(update, context)
     await update.message.reply_text(cal.get_public_events())
