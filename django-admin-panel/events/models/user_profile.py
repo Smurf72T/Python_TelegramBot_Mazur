@@ -77,9 +77,9 @@ class UserProfile(models.Model):
 
     class Meta:
         """Метаданные модели UserProfile."""
-        db_table = 'users'  # Используем существующую таблицу в БД
+        db_table = 'events_userprofile'  # Используем существующую таблицу Django
         verbose_name = "Пользователь бота"
-        verbose_name_plural = "Пользователи б��та"
+        verbose_name_plural = "Пользователи бота"
         # Сортировка по дате регистрации (сначала новые)
         ordering = ['-registered_at']
 
