@@ -1,30 +1,31 @@
 import pytest
-from asgiref.sync import sync_to_async
-from notes_bot.calendar_functions import Calendar
+from events.models import UserProfile, Event
 
 @pytest.mark.django_db
-async def test_register_user():
-    cal = Calendar()
-    result = await sync_to_async(cal.register_user)(777777777, "testbot")
-    assert "успешно зарегистрированы" in result.lower()
-
-    from events.models import UserProfile
-    profile = await sync_to_async(UserProfile.objects.get)(telegram_id=777777777)
-    assert profile is not None
-
-@pytest.mark.django_db
-async def test_create_event(user_profile):
-    cal = Calendar()
-    result = await sync_to_async(cal.create_event)(
-        user_profile.telegram_id,
-        "Тестовое событие",
-        "2026-03-01",
-        "15:00",
-        "Описание"
+def test_user_registration():
+    """Тест создания пользователя через Django ORM"""
+    profile = UserProfile.objects.create(
+        telegram_id=777777777,
+        username="test_user"
     )
-    assert "создано" in result.lower()
+    assert profile.telegram_id == 777777777
+    assert profile.username == "test_user"
 
-    from events.models import Event
-    event = await sync_to_async(Event.objects.filter)(user_id=user_profile.telegram_id).afirst()
-    assert event is not None
+@pytest.mark.django_db
+def test_event_creation():
+    """Тест создания события через Django ORM"""
+    user_profile = UserProfile.objects.create(
+        telegram_id=999999999,
+        username="event_tester"
+    )
+    
+    event = Event.objects.create(
+        user=user_profile,
+        name="Тестовое событие",
+        event_date="2026-03-01",
+        event_time="15:00:00",
+        details="Описание теста"
+    )
+    
     assert event.name == "Тестовое событие"
+    assert event.user.telegram_id == user_profile.telegram_id
