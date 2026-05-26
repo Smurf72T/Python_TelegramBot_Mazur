@@ -27,8 +27,7 @@ RUN apt-get update && apt-get install -y \
 # Установка Python-зависимостей
 # =============================================================================
 # Копируем файл requirements.txt с перечнем всех необходимых пакетов
-# Путь ../requirements.txt указывает на файл в родительской директории
-COPY ../requirements.txt ./
+COPY requirements.txt ./
 
 # Устанавливаем зависимости из requirements.txt
 # --no-cache-dir: отключаем кэширование pip для уменьшения размера образа
@@ -52,7 +51,7 @@ COPY . .
 # - ожидание готовности базы данных
 # - применение миграций Django
 # - создание суперпользователя
-COPY entrypoint.sh /entrypoint.sh
+COPY django-admin-panel/entrypoint.sh /entrypoint.sh
 
 # Делаем скрипт исполняемым (chmod +x)
 RUN chmod +x /entrypoint.sh

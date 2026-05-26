@@ -68,10 +68,10 @@ services:
   django:
     # Настройки сборки образа
     build:
-      # Контекст сборки: директория с Dockerfile.django
-      context: ./django-admin-panel
+      # Контекст сборки: корень проекта (чтобы получить доступ к requirements.txt)
+      context: .
       # Имя используемого Dockerfile
-      dockerfile: Dockerfile.django
+      dockerfile: django-admin-panel/Dockerfile.django
     
     # Уникальное имя контейнера
     container_name: calendar_django
