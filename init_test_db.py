@@ -5,7 +5,6 @@
 import os
 import sys
 import django
-from django.conf import settings
 
 # Добавляем путь к проекту
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))

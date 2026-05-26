@@ -1,9 +1,5 @@
-from typing import Optional
-import datetime
 from datetime import date, time
 
-import psycopg2
-from psycopg2 import pool
 
 from notes_bot.database import DatabasePool
 

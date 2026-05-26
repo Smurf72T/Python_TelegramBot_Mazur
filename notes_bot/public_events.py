@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from notes_bot.database import DatabasePool
 from notes_bot.event_crud import EventCRUD
 

@@ -8,7 +8,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from notes_bot.calendar_functions import Calendar
 
 # Импортируем валидаторы
 

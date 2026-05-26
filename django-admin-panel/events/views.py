@@ -22,7 +22,6 @@ import json
 from datetime import date
 from django.http import HttpResponse
 from rest_framework import viewsets, permissions
-from rest_framework.response import Response
 from events.models import (
     Event,
     UserProfile,

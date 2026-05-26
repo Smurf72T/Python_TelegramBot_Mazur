@@ -5,8 +5,6 @@
 пользователями в Telegram-боте через PostgreSQL базу данных.
 """
 
-import psycopg2
-from typing import Dict, Any
 
 from notes_bot.database import DatabasePool
 

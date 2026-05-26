@@ -9,7 +9,6 @@ import uuid  # Для генерации уникальных идентифик
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
 django.setup()
 
-from django.db import models
 from telegram import Update
 from telegram.ext import ContextTypes
 from events.models.user_profile import UserProfile

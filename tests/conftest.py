@@ -1,7 +1,6 @@
 import pytest
 import sys
 import os
-from asgiref.sync import sync_to_async
 from django.test import AsyncClient
 from events.models import UserProfile, Event
 

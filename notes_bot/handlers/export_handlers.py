@@ -13,10 +13,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from telegram.error import TelegramError
 
-from notes_bot.calendar_functions import Calendar
 
 # Импортируем общие вспомогательные функции
-from notes_bot.utils.helpers import get_user_and_calendar
 
 
 # Функция вынесена в notes_bot.utils.helpers
@@ -67,7 +65,6 @@ async def export_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response = await client.get(url)
             response.raise_for_status()  # Проверка на ошибки HTTP (4xx, 5xx)
             content = response.content
-            content_type = response.headers.get('content-type', 'application/octet-stream')
     except httpx.RequestError as e:
         await query.message.reply_text(
             f"❌ Ошибка при подключении к серверу экспорта: {e}\n\n"

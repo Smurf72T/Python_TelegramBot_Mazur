@@ -1,4 +1,3 @@
-from .calendar_interface import Calendar
 
 # Этот файл теперь является точкой входа для обратной совместимости.
 # Основная реализация перемещена в calendar_interface.py и другие модули.

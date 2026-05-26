@@ -1,4 +1,3 @@
-from typing import Dict, Any
 
 from notes_bot.database import DatabasePool
 from notes_bot.event_crud import EventCRUD
