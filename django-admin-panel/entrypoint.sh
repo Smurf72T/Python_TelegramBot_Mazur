@@ -27,22 +27,26 @@ RUN_ENV=${RUN_ENV:-"local"}
 # Хост базы данных зависит от окружения выполнения:
 # - В Docker: используем имя сервиса "db" (из docker-compose.yml)
 # - Локально: используем "localhost"
+# ОБЯЗАТЕЛЬНО: установите DB_HOST_DOCKER или DB_HOST_LOCAL в .env
 if [ "$RUN_ENV" = "docker" ]; then
-    # В Docker-сети контейнеры обращаются друг к другу по именам сервисов
-    DB_HOST=${DB_HOST_DOCKER:-"db"}
+    if [ -z "$DB_HOST_DOCKER" ]; then echo "Ошибка: DB_HOST_DOCKER не установлена"; exit 1; fi
+    DB_HOST=$DB_HOST_DOCKER
 else
-    # При локальном запуске БД доступна на localhost
-    DB_HOST=${DB_HOST_LOCAL:-"localhost"}
+    if [ -z "$DB_HOST_LOCAL" ]; then echo "Ошибка: DB_HOST_LOCAL не установлена"; exit 1; fi
+    DB_HOST=$DB_HOST_LOCAL
 fi
 
 # =============================================================================
 # Конфигурация подключения к базе данных
 # =============================================================================
-# Параметры подключения к PostgreSQL с значениями по умолчанию
-# Если переменная не задана в .env, используется значение по умолчанию
-DB_PORT=${DB_PORT:-5432}              # Порт PostgreSQL
-DB_USER=${DB_USER:-postgres}         # Имя пользователя
-DB_PASSWORD=${DB_PASSWORD:-postgres} # Пароль пользователя
+# Параметры подключения к PostgreSQL (обязательные переменные окружения)
+if [ -z "$DB_PORT" ]; then echo "Ошибка: DB_PORT не установлена"; exit 1; fi
+if [ -z "$DB_USER" ]; then echo "Ошибка: DB_USER не установлена"; exit 1; fi
+if [ -z "$DB_PASSWORD" ]; then echo "Ошибка: DB_PASSWORD не установлена"; exit 1; fi
+
+DB_PORT=$DB_PORT
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASSWORD
 
 # =============================================================================
 # Ожидание готовности базы данных
@@ -82,8 +86,9 @@ python /app/manage.py migrate --noinput
 # Создание суперпользователя Django
 # =============================================================================
 # Проверяем существование суперпользователя и создаем его при необходимости.
-# Это позволяет автоматически настроить доступ к админке при первом запуске.
-# Используем heredoc (<< EOF) для передачи Python-кода в интерактивную консоль Django.
+# ОБЯЗАТЕЛЬНО: установите ADMIN_PASSWORD в .env
+if [ -z "$ADMIN_PASSWORD" ]; then echo "Ошибка: ADMIN_PASSWORD не установлена"; exit 1; fi
+
 echo "Создание суперпользователя..."
 cat << EOF | python /app/manage.py shell
 from django.contrib.auth import get_user_model
@@ -94,7 +99,7 @@ if not User.objects.filter(username='admin_sup').exists():
     User.objects.create_superuser(
         'admin_sup',      # Имя пользователя
         'admin@admin.admin',  # Email
-        'admin123'        # Пароль
+        '$ADMIN_PASSWORD'        # Пароль из переменной окружения
     )
     print('Суперпользователь admin_sup успешно создан.')
 else:
