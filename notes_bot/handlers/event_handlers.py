@@ -101,8 +101,12 @@ async def list_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Показывает список всех событий пользователя.
     Использует вспомогательную функцию get_user_and_calendar для устранения дублирования.
     """
-    user_id, cal = get_user_and_calendar(update, context)
-    await update.message.reply_text(cal.list_events(user_id))
+    try:
+        user_id, cal = get_user_and_calendar(update, context)
+        result = cal.list_events(user_id)
+        await update.message.reply_text(result)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка при получении событий: {str(e)}")
 
 
 
