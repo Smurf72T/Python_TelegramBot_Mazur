@@ -1,12 +1,20 @@
 from typing import Optional, List, Dict, Any
 import datetime
 from datetime import date, time
+import os
+import sys
+
+# Добавляем корневую директорию в путь для импорта db_config
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 from notes_bot.database import DatabasePool
 from notes_bot.user_management import UserManager
 from notes_bot.event_crud import EventCRUD
 from notes_bot.appointment_manager import AppointmentManager
 from notes_bot.public_events import PublicEventsManager
+from shared_utils.db_config import DB_CONFIG
 
 
 class Calendar:
@@ -32,9 +40,6 @@ class Calendar:
         Создает экземпляры всех менеджеров и настраивает их взаимодействие.
         Использует конфигурацию из глобальной переменной DB_CONFIG для подключения к базе данных.
         """
-        # Импортируем конфигурацию базы данных
-        from db_config import DB_CONFIG
-        
         # Создаем пул соединений
         self.db_pool = DatabasePool(DB_CONFIG)
         

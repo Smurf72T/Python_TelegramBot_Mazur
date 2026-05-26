@@ -13,12 +13,20 @@ init_db.py — скрипт инициализации/обновления ст
 
 Зависимости:
 - psycopg2: драйвер PostgreSQL для Python
-- db_config: модуль с настройками подключения к БД
+- shared_utils.db_config: модуль с настройками подключения к БД
 """
 
-import psycopg2
+import os
+import sys
 import time
-from db_config import DB_CONFIG
+import psycopg2
+
+# Добавляем корневую директорию в путь для импорта
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+from shared_utils.db_config import DB_CONFIG
 from shared_utils.db_utils import wait_for_db
 
 
@@ -71,19 +79,31 @@ def wait_for_db():
 # ОСНОВНОЙ БЛОК СКРИПТА
 # ============================================================================
 
+# Импортируем функцию ожидания после обновления импортов выше
+# from shared_utils.db_utils import wait_for_db
+
+# ============================================================================
+# ОСНОВНОЙ БЛОК СКРИПТА
+# ============================================================================
+
 # Шаг 1: Ожидание готовности базы данных
 print("Ожидание готовности базы данных...")
 wait_for_db()
 
 # Шаг 2: Установка соединения с базой данных
 # Используем autocommit=True для автоматического применения изменений
-conn = psycopg2.connect(
-    host=DB_CONFIG["host"],
-    port=DB_CONFIG["port"],
-    database=DB_CONFIG["database"],
-    user=DB_CONFIG["user"],
-    password=DB_CONFIG["password"]
-)
+try:
+    conn = psycopg2.connect(
+        host=DB_CONFIG["host"],
+        port=DB_CONFIG["port"],
+        database=DB_CONFIG["database"],
+        user=DB_CONFIG["user"],
+        password=DB_CONFIG["password"]
+    )
+except psycopg2.OperationalError as e:
+    print(f"Ошибка подключения к базе данных: {e}")
+    sys.exit(1)
+
 conn.autocommit = True
 cur = conn.cursor()
 

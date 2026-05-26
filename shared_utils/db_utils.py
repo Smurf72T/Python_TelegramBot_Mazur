@@ -5,10 +5,18 @@
 в разных частях приложения (бот, инициализация, администрирование).
 """
 
+import os
+import sys
 import time
 import psycopg2
 from psycopg2 import OperationalError
-from db_config import DB_CONFIG
+
+# Добавляем корневую директорию в путь для импорта db_config
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+from shared_utils.db_config import DB_CONFIG
 
 
 def wait_for_db():
