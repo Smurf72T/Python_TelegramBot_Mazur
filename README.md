@@ -50,18 +50,34 @@
 ```bash
 docker-compose up --build
 ```
-4. Бот запустится автоматически, Django-админка будет доступна по адресу http://localhost:8000
+4. Бот запустится автоматически, Django-админка будет доступна по адресу http://localhost:8000/admin
 
 ### Переменные окружения
 Создайте файл `.env` на основе `.env.example`:
 ```bash
-DB_NAME=calendar_bot          # Имя базы данных
-DB_USER=ваш_пользователь      # Пользователь PostgreSQL
-DB_PASSWORD=ваш_пароль        # Пароль PostgreSQL
-DB_PORT=5432
+# База данных
+DB_HOST_LOCAL         # Хост БД для локального запуска
+DB_HOST_DOCKER        # Хост БД для Docker (имя сервиса)
+DB_PORT               # Порт PostgreSQL
+DB_NAME               # Имя базы данных
+POSTGRES_USER         # Пользователь PostgreSQL
+DB_PASSWORD           # Пароль пользователя
+DB_MINCONN=1          # Минимальное количество соединений
+DB_MAXCONN=10         # Максимальное количество соединений
+
+# Окружение
+RUN_ENV=local                   # local или docker
+
+# Telegram бот
 TELEGRAM_BOT_TOKEN=ваш_токен_от_botfather
+
+# Django
 SECRET_KEY=ваш_секретный_ключ_django
 ```
+
+**Примечание:** Суперпользователь админки создается автоматически:
+- Логин: `admin_sup`
+- Пароль: `admin123`
 
 ### Запуск тестов
 ```bash
