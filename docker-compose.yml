@@ -45,8 +45,7 @@ services:
     volumes:
       # postgres_data: именованный том для персистентного хранения данных БД
       - postgres_data:/var/lib/postgresql/data
-      # init_db.sql: скрипт инициализации базы данных при первом запуске
-      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      # Удалено: ./init_db.sql - инициализация теперь через миграции Django
     
     # Проброс портов для доступа к БД с хостовой машины
     ports:
