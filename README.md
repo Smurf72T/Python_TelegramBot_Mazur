@@ -13,10 +13,33 @@
 
 ## Технологии
 - Python 3.12
-- python-telegram-bot 20.9
+- python-telegram-bot 22.7
 - Django 6.0.2
-- PostgreSQL
+- Django REST Framework 3.16.1
+- PostgreSQL 16
 - Docker
+
+## Команды бота
+
+| Команда | Описание |
+|---------|----------|
+| `/start` | Начать работу с ботом |
+| `/register` | Зарегистрироваться / обновить профиль |
+| `/createevent` | Создать новое событие |
+| `/listevents` | Просмотреть свои события |
+| `/readevent <id>` | Показать детали события |
+| `/editevent <id>` | Изменить событие |
+| `/deleteevent <id>` | Удалить событие |
+| `/appoint` | Назначить встречу |
+| `/myappointments` | Мои назначенные встречи |
+| `/myinvites` | Мои приглашения |
+| `/confirm` | Подтвердить встречу |
+| `/decline` | Отклонить встречу |
+| `/mycalendar` | Показать календарь |
+| `/publicevent` | Сделать событие публичным/приватным |
+| `/publicevents` | Просмотр публичных событий |
+| `/export` | Экспортировать данные (CSV/JSON) |
+| `/help` | Показать справку |
 
 ## Запуск проекта
 
@@ -28,6 +51,26 @@
 docker-compose up --build
 ```
 4. Бот запустится автоматически, Django-админка будет доступна по адресу http://localhost:8000
+
+### Переменные окружения
+Создайте файл `.env` на основе `.env.example`:
+```bash
+DB_NAME=calendar_bot          # Имя базы данных
+DB_USER=ваш_пользователь      # Пользователь PostgreSQL
+DB_PASSWORD=ваш_пароль        # Пароль PostgreSQL
+DB_PORT=5432
+TELEGRAM_BOT_TOKEN=ваш_токен_от_botfather
+SECRET_KEY=ваш_секретный_ключ_django
+```
+
+### Запуск тестов
+```bash
+docker-compose up tests
+```
+или локально:
+```bash
+pytest tests/ -v
+```
 
 ### Локальный запуск
 1. Установите зависимости:
