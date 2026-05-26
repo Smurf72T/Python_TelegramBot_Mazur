@@ -43,6 +43,15 @@
 
 ## Запуск проекта
 
+### ⚠️ Важное предупреждение по безопасности
+Перед запуском **обязательно** установите уникальные значения для:
+- `DB_PASSWORD` — пароль базы данных
+- `SECRET_KEY` — секретный ключ Django
+- `ADMIN_PASSWORD` — пароль администратора
+- `TELEGRAM_BOT_TOKEN` — токен бота от BotFather
+
+**Никогда не используйте дефолтные значения в production!**
+
 ### Через Docker (рекомендуется)
 1. Убедитесь, что у вас установлены Docker и Docker Compose
 2. Создайте файл `.env` в корне проекта (пример в `.env.example`)
@@ -55,29 +64,34 @@ docker-compose up --build
 ### Переменные окружения
 Создайте файл `.env` на основе `.env.example`:
 ```bash
-# База данных
-DB_HOST_LOCAL         # Хост БД для локального запуска
-DB_HOST_DOCKER        # Хост БД для Docker (имя сервиса)
-DB_PORT               # Порт PostgreSQL
-DB_NAME               # Имя базы данных
-POSTGRES_USER         # Пользователь PostgreSQL
-DB_PASSWORD           # Пароль пользователя
-DB_MINCONN=1          # Минимальное количество соединений
-DB_MAXCONN=10         # Максимальное количество соединений
+# База данных (ОБЯЗАТЕЛЬНО все переменные)
+DB_HOST_LOCAL=localhost         # Хост БД для локального запуска
+DB_HOST_DOCKER=db               # Хост БД для Docker (имя сервиса)
+DB_PORT=5432                    # Порт PostgreSQL
+DB_NAME=calendar_db             # Имя базы данных
+POSTGRES_USER=calendar_bot      # Пользователь PostgreSQL
+DB_PASSWORD=your_strong_password  # Пароль пользователя (без дефолтов!)
+DB_MINCONN=1                    # Минимальное количество соединений
+DB_MAXCONN=10                   # Максимальное количество соединений
 
 # Окружение
 RUN_ENV=local                   # local или docker
 
-# Telegram бот
-TELEGRAM_BOT_TOKEN=ваш_токен_от_botfather
+# Telegram бот (ОБЯЗАТЕЛЬНО)
+TELEGRAM_BOT_TOKEN=your_token_here
 
-# Django
-SECRET_KEY=ваш_секретный_ключ_django
+# Django (ОБЯЗАТЕЛЬНО)
+SECRET_KEY=your_strong_secret_key
+
+# Админка Django (ОБЯЗАТЕЛЬНО)
+ADMIN_PASSWORD=your_strong_admin_password
 ```
+
+**Важно:** Все переменные являются обязательными. Проект не запустится без корректно настроенного `.env`.
 
 **Примечание:** Суперпользователь админки создается автоматически:
 - Логин: `admin_sup`
-- Пароль: `admin123`
+- Пароль: из переменной `ADMIN_PASSWORD`
 
 ### Запуск тестов
 ```bash
