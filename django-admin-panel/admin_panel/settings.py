@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dqdg4vt5=!c_=xwtcx)ocd1r&-t$53sod^y)620s&8rq0dqgvl')
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -88,11 +88,11 @@ RUN_ENV = os.getenv("RUN_ENV") or ("docker" if IS_DOCKER else "local")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv("DB_NAME", "calendar_bot"),
-        'USER': os.getenv("DB_USER", "postgres"),
-        'PASSWORD': os.getenv("DB_PASSWORD", "postgres"),
+        'NAME': os.getenv("DB_NAME"),
+        'USER': os.getenv("DB_USER"),
+        'PASSWORD': os.getenv("DB_PASSWORD"),
         'HOST': os.getenv("DB_HOST_" + RUN_ENV.upper()),
-        'PORT': os.getenv("DB_PORT", "5432"),
+        'PORT': os.getenv("DB_PORT"),
     }
 }
 
