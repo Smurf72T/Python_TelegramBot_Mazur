@@ -39,13 +39,31 @@ async def create_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["date"] = update.message.text.strip()
-    await update.message.reply_text("Время (ЧЧ:ММ)?")
+    """Валидирует дату и переходит к вводу времени."""
+    date_str = update.message.text.strip()
+    
+    # Валидация даты
+    is_valid, result = validate_date(date_str)
+    if not is_valid:
+        await update.message.reply_text(result + "\nВведите дату заново (ГГГГ-ММ-ДД):")
+        return DATE  # Остаёмся на этом шаге
+    
+    context.user_data["date"] = date_str
+    await update.message.reply_text("Время (ЧЧ:ММ)？")
     return TIME
 
 
 async def create_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["time"] = update.message.text.strip()
+    """Валидирует время и переходит к вводу описания."""
+    time_str = update.message.text.strip()
+    
+    # Валидация времени
+    is_valid, result = validate_time(time_str)
+    if not is_valid:
+        await update.message.reply_text(result + "\nВведите время заново (ЧЧ:ММ):")
+        return TIME  # Остаёмся на этом шаге
+    
+    context.user_data["time"] = time_str
     await update.message.reply_text("Описание (можно пустым):")
     return DETAILS
 
