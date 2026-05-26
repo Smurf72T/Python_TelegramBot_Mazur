@@ -161,14 +161,15 @@ services:
   # Сервис для запуска тестов
   # =============================================================================
   tests:
-    # Используем тот же Dockerfile, что и для бота
+    # Используем тот же Dockerfile, что и для бота (он содержит все зависимости)
     build:
       context: .
       dockerfile: Dockerfile.bot
     
     # Команда запуска тестов
+    # Запускаем pytest из корня проекта, где находится pytest.ini
     command: >
-      sh -c "cd django-admin-panel && python -m pytest -v --reuse-db"
+      sh -c "python -m pytest tests/ -v --tb=short"
     
     # Загружаем переменные окружения из .env
     env_file:
@@ -179,6 +180,10 @@ services:
       # Ждем полной готовности сервиса db
       db:
         condition: service_healthy
+    
+    # Переопределяем команду запуска для тестов
+    # Не используем entrypoint.sh, так как он специфичен для Django
+    entrypoint: []
 
 # =============================================================================
 # Определение volumes (томов)
