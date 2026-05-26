@@ -16,7 +16,7 @@ from notes_bot.validators.date_validator import validate_date
 from notes_bot.validators.time_validator import validate_time
 
 # Импортируем общие вспомогательные функции
-from notes_bot.utils.helpers import get_user_and_calendar, require_args, send_usage_message, clear_user_data
+from notes_bot.utils.helpers import get_user_and_calendar, require_args, send_usage_message, clear_user_data, send_typing_action
 
 
 # Состояния для диалогов
@@ -38,6 +38,7 @@ async def create_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return DATE
 
 
+@send_typing_action
 async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Валидирует дату и переходит к вводу времени."""
     date_str = update.message.text.strip()
@@ -53,6 +54,7 @@ async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return TIME
 
 
+@send_typing_action
 async def create_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Валидирует время и переходит к вводу описания."""
     time_str = update.message.text.strip()
@@ -76,26 +78,26 @@ async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = context.user_data.get("name", "").strip()
     date_str = context.user_data.get("date", "").strip()
     time_str = context.user_data.get("time", "").strip()
-    descr = update.message.text.strip()
+    descr = update.message.text.strip() if update.message.text else ""
 
     # Валидация названия события
     is_valid, error = validate_event_name(name)
     if not is_valid:
-        await update.message.reply_text(error)
+        await update.message.reply_text(error or "Ошибка названия события")
         clear_user_data(context)
         return ConversationHandler.END
 
     # Валидация даты
     is_valid, date_obj = validate_date(date_str)
     if not is_valid:
-        await update.message.reply_text(error)
+        await update.message.reply_text(error or "Ошибка даты")
         clear_user_data(context)
         return ConversationHandler.END
 
     # Валидация времени
     is_valid, time_obj = validate_time(time_str)
     if not is_valid:
-        await update.message.reply_text(error)
+        await update.message.reply_text(error or "Ошибка времени")
         clear_user_data(context)
         return ConversationHandler.END
 
