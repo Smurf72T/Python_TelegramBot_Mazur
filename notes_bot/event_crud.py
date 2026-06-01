@@ -147,14 +147,14 @@ class EventCRUD:
             user_id (int): ID пользователя
             event_id (str): ID события для редактирования
             name (optional): Новое название
-            date (optional): Новая дата
-            time (optional): Новое время
+            new_date (optional): Новая дата
+            new_time (optional): Новое время
             details (optional): Новые детали
         
         Returns:
             str: Сообщение об успешном редактировании или ошибке
         """
-        if all(v is None for v in (name, date, time, details)):
+        if all(v is None for v in (name, new_date, new_time, details)):
             return "Нечего изменять"
 
         conn = self.db_pool.get_connection()
