@@ -87,14 +87,6 @@ def export_events(request):
             content_type='text/plain; charset=utf-8'
         )
 
-    # Дополнительная проверка: если token равен 'None', разрешаем доступ (для отладки)
-    if token == 'None':
-        # Получаем первый профиль пользователя или создаем его
-        profile, created = UserProfile.objects.get_or_create(telegram_id=user_id)
-        if created:
-            profile.export_token = 'None'
-            profile.save()
-
     # Получение событий пользователя, отсортированных по дате и времени (убывание)
     events = Event.objects.filter(user=profile).order_by('-event_date', '-event_time')
 
@@ -180,14 +172,6 @@ def export_events_json(request):
             content_type='text/plain; charset=utf-8'
         )
 
-    # Дополнительная проверка: если token равен 'None', разрешаем доступ (для отладки)
-    if token == 'None':
-        # Получаем первый профиль пользователя или создаем его
-        profile, created = UserProfile.objects.get_or_create(telegram_id=user_id)
-        if created:
-            profile.export_token = 'None'
-            profile.save()
-
     # Получение событий пользователя, отсортированных по дате и времени (убывание)
     events = Event.objects.filter(user=profile).order_by('-event_date', '-event_time')
 
@@ -240,24 +224,8 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     """
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
     http_method_names = ['get', 'post', 'put', 'patch', 'delete']
-
-    def get_queryset(self):
-        """
-        Возвращает профили пользователей с учётом прав доступа.
-        - Администраторы видят все профили
-        - Обычные пользователи видят только свой профиль
-        """
-        user = self.request.user
-        if user.is_superuser or user.is_staff:
-            return UserProfile.objects.all()
-
-        # Если у пользователя есть профиль, возвращаем только его
-        if hasattr(user, 'profile'):
-            return UserProfile.objects.filter(user=user)
-
-        return UserProfile.objects.none()
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -284,34 +252,8 @@ class EventViewSet(viewsets.ModelViewSet):
     """
     queryset = Event.objects.all()
     serializer_class = EventSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
     http_method_names = ['get', 'post', 'put', 'patch', 'delete']
-
-    def get_queryset(self):
-        """
-        Возвращает события с учётом прав доступа.
-        - Администраторы видят все события
-        - Обычные пользователи видят только свои события
-        """
-        user = self.request.user
-        if user.is_superuser or user.is_staff:
-            return Event.objects.all()
-
-        # Если у пользователя есть профиль, возвращаем только его события
-        if hasattr(user, 'profile'):
-            return Event.objects.filter(user=user.profile)
-
-        return Event.objects.none()
-
-    def perform_create(self, serializer):
-        """
-        Автоматически привязывает создаваемое событие к профилю текущего пользователя.
-        """
-        user = self.request.user
-        if hasattr(user, 'profile'):
-            serializer.save(user=user.profile)
-        else:
-            raise permissions.PermissionDenied("У пользователя нет профиля")
 
 
 class BotStatisticsViewSet(viewsets.ReadOnlyModelViewSet):
@@ -388,31 +330,5 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     """
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
     http_method_names = ['get', 'post', 'put', 'patch', 'delete']
-
-    def get_queryset(self):
-        """
-        Возвращает записи с учётом прав доступа.
-        - Администраторы видят все записи
-        - Обычные пользователи видят только свои записи
-        """
-        user = self.request.user
-        if user.is_superuser or user.is_staff:
-            return Appointment.objects.all()
-
-        # Если у пользователя есть профиль, возвращаем только его записи
-        if hasattr(user, 'profile'):
-            return Appointment.objects.filter(user=user.profile)
-
-        return Appointment.objects.none()
-
-    def perform_create(self, serializer):
-        """
-        Автоматически привязывает создаваемую запись к профилю текущего пользователя.
-        """
-        user = self.request.user
-        if hasattr(user, 'profile'):
-            serializer.save(user=user.profile)
-        else:
-            raise permissions.PermissionDenied("У пользователя нет профиля")
