@@ -1,6 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 
+import uuid
+
 from asgiref.sync import sync_to_async
 
 from notes_bot.utils.helpers import (
@@ -37,7 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 @send_typing_action
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик команды /register для регистрации пользователя"""
+    """Обработчик команды /register для регистрации/обновления профиля пользователя"""
     user = update.effective_user
 
     # Получаем или создаем пользователя
@@ -49,28 +51,31 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             first_name=user.first_name,
             last_name=user.last_name
         )
+        await update.message.reply_text("Профиль успешно создан!")
+        return
 
-    # Проверяем, заполнен ли профиль
-    if context_user.first_name and context_user.last_name:
-        await update.message.reply_text(
-            "Твой профиль уже заполнен!"
-        )
-    else:
-        # Заполняем недостающие данные
-        updated_fields = {}
-        if not context_user.first_name:
-            updated_fields['first_name'] = user.first_name
-        if not context_user.last_name:
-            updated_fields['last_name'] = user.last_name
-
-        for field, value in updated_fields.items():
+    # Синхронизируем данные профиля с данными Telegram
+    updated = False
+    fields = {
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+    }
+    for field, value in fields.items():
+        if value and getattr(context_user, field) != value:
             setattr(context_user, field, value)
-        
+            updated = True
+
+    # Гарантируем наличие токена экспорта для безопасной выгрузки
+    if not context_user.export_token:
+        context_user.export_token = uuid.uuid4().hex
+        updated = True
+
+    if updated:
         await sync_to_async(context_user.save)()
-        
-        await update.message.reply_text(
-            "Профиль успешно обновлён!"
-        )
+        await update.message.reply_text("Профиль успешно обновлён!")
+    else:
+        await update.message.reply_text("Твой профиль уже заполнен и актуален!")
 
 
 @send_typing_action

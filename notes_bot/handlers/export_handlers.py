@@ -5,6 +5,8 @@
 Выносит логику обработки команд из основного модуля бота для улучшения читаемости и поддержки.
 """
 
+import os
+import uuid
 from datetime import datetime
 import httpx
 
@@ -19,14 +21,34 @@ from notes_bot.calendar_functions import Calendar
 from notes_bot.utils.helpers import get_user_and_calendar
 
 
-# Функция вынесена в notes_bot.utils.helpers
+def get_export_base_url() -> str:
+    """Возвращает базовый URL сервера экспорта.
+
+    Приоритет: переменная окружения EXPORT_BASE_URL, затем
+    http://django:8000 в Docker-режиме, иначе http://localhost:8000.
+    """
+    configured = os.getenv("EXPORT_BASE_URL")
+    if configured:
+        return configured.rstrip("/")
+    if os.getenv("RUN_ENV") == "docker":
+        return "http://django:8000"
+    return "http://localhost:8000"
 
 
 async def export_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     from events.models import UserProfile
-    profile = await sync_to_async(UserProfile.objects.get)(telegram_id=user_id)
+
+    profile = await sync_to_async(UserProfile.objects.filter(telegram_id=user_id).first)()
+    if profile is None:
+        profile = await sync_to_async(UserProfile.objects.create)(
+            telegram_id=user_id,
+            export_token=uuid.uuid4().hex,
+        )
+    elif not profile.export_token:
+        profile.export_token = uuid.uuid4().hex
+        await sync_to_async(profile.save)()
 
     keyboard = [
         [
@@ -52,11 +74,13 @@ async def export_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = int(parts[2])
     token = parts[3]
 
+    base_url = get_export_base_url()
+
     if fmt == "csv":
-        url = f"http://django:8000/export/events/?user_id={user_id}&token={token}"
+        url = f"{base_url}/export/events/?user_id={user_id}&token={token}"
         ext = "csv"
     else:
-        url = f"http://django:8000/export/events/json/?user_id={user_id}&token={token}"
+        url = f"{base_url}/export/events/json/?user_id={user_id}&token={token}"
         ext = "json"
 
     today = datetime.now().strftime("%Y-%m-%d")

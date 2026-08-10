@@ -68,14 +68,14 @@ async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     # Валидация даты
-    is_valid, date_obj = validate_date(date_str)
+    is_valid, error = validate_date(date_str)
     if not is_valid:
         await update.message.reply_text(error)
         clear_user_data(context)
         return ConversationHandler.END
 
     # Валидация времени
-    is_valid, time_obj = validate_time(time_str)
+    is_valid, error = validate_time(time_str)
     if not is_valid:
         await update.message.reply_text(error)
         clear_user_data(context)

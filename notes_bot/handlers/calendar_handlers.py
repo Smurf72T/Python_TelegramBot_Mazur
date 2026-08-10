@@ -8,7 +8,10 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from asgiref.sync import sync_to_async
+
 from notes_bot.calendar_functions import Calendar
+from notes_bot.statistics import get_user_stats
 
 # Импортируем общие вспомогательные функции
 from notes_bot.utils.helpers import get_user_and_calendar, require_args, send_usage_message, clear_user_data
@@ -25,8 +28,8 @@ async def my_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id, cal = get_user_and_calendar(update, context)
 
     events_text = cal.list_events(user_id)
-    stats_text = "Статистика: в разработке"
-    public_text = cal.get_public_events()
+    stats_text = await sync_to_async(get_user_stats)(user_id)
+    public_text = cal.get_public_events(user_id)
 
     await update.message.reply_text(
         f"👤 **Личный кабинет**\n"
