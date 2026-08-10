@@ -36,7 +36,7 @@ from notes_bot.handlers.event_handlers import (
     read_event, delete_event, edit_start, edit_choose_field, edit_set_value, list_events
 )
 from notes_bot.handlers.appointment_handlers import (
-    appoint_start, appoint_details, my_appointments, my_invites,
+    appoint_start, appoint_details, appoint_skip, my_appointments, my_invites,
     confirm_appointment, decline_appointment
 )
 from notes_bot.handlers.calendar_handlers import (
@@ -106,7 +106,12 @@ def main():
 
     appoint_conv = ConversationHandler(
         entry_points=[CommandHandler("appoint", appoint_start)],
-        states={APPOINT_COMMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, appoint_details)]},
+        states={
+            APPOINT_COMMENT: [
+                CommandHandler("skip", appoint_skip),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, appoint_details),
+            ]
+        },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 

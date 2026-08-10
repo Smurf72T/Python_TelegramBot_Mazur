@@ -49,10 +49,7 @@ async def appoint_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return APPOINT_COMMENT
 
 
-async def appoint_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    details = "" if text == "/skip" else text.strip()
-
+async def _create_appointment_from_context(update: Update, context: ContextTypes.DEFAULT_TYPE, details: str = ""):
     cal = context.bot_data["calendar"]
     organizer_id = update.effective_user.id
     event_id = context.user_data["appoint_event_id"]
@@ -62,6 +59,17 @@ async def appoint_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(result)
     context.user_data.clear()
     return ConversationHandler.END
+
+
+async def appoint_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    details = "" if text == "/skip" else text.strip()
+    return await _create_appointment_from_context(update, context, details)
+
+
+async def appoint_skip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Пропускает комментарий при создании приглашения (без деталей)."""
+    return await _create_appointment_from_context(update, context, "")
 
 
 async def my_appointments(update: Update, context: ContextTypes.DEFAULT_TYPE):
