@@ -179,7 +179,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
     
     Поля:
         id: Уникальный идентификатор встречи
-        organizer_id: Telegram ID организатора встречи (создавшего встречу)
+        organizer_telegram_id: Telegram ID организатора встречи (создавшего встречу)
         event: Ссылка на событие, на основе которого создана встреча
         participant_telegram_id: Telegram ID участника встречи (приглашенного пользователя)
         date: Дата проведения встречи
@@ -204,7 +204,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
         model = Appointment
         fields = [
             'id', 
-            'organizer_id', 
+            'organizer_telegram_id', 
             'event', 
             'participant_telegram_id', 
             'date', 

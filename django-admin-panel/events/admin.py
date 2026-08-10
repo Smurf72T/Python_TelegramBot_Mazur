@@ -239,7 +239,7 @@ class AppointmentAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'event',
-        'organizer_id',
+        'organizer_telegram_id',
         'participant_telegram_id',
         'status'
     )
@@ -248,7 +248,7 @@ class AppointmentAdmin(admin.ModelAdmin):
     list_filter = ('status', 'date')
 
     # Поля для поиска
-    search_fields = ('event__name', 'organizer_id', 'participant_telegram_id')
+    search_fields = ('event__name', 'organizer_telegram_id', 'participant_telegram_id')
 
 
 @admin.register(BotStatistics)

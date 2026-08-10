@@ -17,7 +17,7 @@ class Appointment(models.Model):
     Каждое приглашение имеет организатора, событие, участника и статус.
 
     Атрибуты:
-        organizer: Пользователь Django, создавший приглашение
+        organizer_telegram_id: Telegram ID организатора (создавшего приглашение)
         event: Событие, на которое приглашают
         participant_telegram_id: Telegram ID приглашённого участника
         date: Дата встречи
@@ -27,12 +27,9 @@ class Appointment(models.Model):
         created_at: Время создания приглашения
     """
 
-    # Организатор встречи (пользователь Django admin-панели)
-    organizer = models.ForeignKey(
-        'auth.User',
-        on_delete=models.CASCADE,
-        related_name='organized_appointments',
-        verbose_name="Организатор"
+    # Telegram ID организатора (пользователь Telegram, создавший приглашение)
+    organizer_telegram_id = models.BigIntegerField(
+        verbose_name="Telegram ID организатора"
     )
 
     # Событие, на которое приглашают
