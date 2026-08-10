@@ -3,7 +3,6 @@ from asgiref.sync import sync_to_async
 from notes_bot.calendar_interface import Calendar
 from notes_bot.user_management import UserManager
 from notes_bot.event_crud import EventCRUD
-from notes_bot.database import DatabasePool
 
 @pytest.mark.django_db
 @pytest.mark.asyncio
