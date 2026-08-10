@@ -37,5 +37,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterModelTable(
+            name='userprofile',
+            table='events_userprofile',
+        ),
         migrations.RunPython(rename_users_table, noop),
     ]
