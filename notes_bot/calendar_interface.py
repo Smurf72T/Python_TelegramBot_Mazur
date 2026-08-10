@@ -1,8 +1,5 @@
-from typing import Optional, List, Dict, Any
-import datetime
-from datetime import date, time
+from typing import Optional
 
-from notes_bot.database import DatabasePool
 from notes_bot.user_management import UserManager
 from notes_bot.event_crud import EventCRUD
 from notes_bot.appointment_manager import AppointmentManager
@@ -18,7 +15,6 @@ class Calendar:
     обратную совместимость с оригинальным классом Calendar из calendar_functions.py.
 
     Атрибуты:
-        db_pool (DatabasePool): Пул соединений с базой данных
         user_manager (UserManager): Менеджер пользователей
         event_crud (EventCRUD): Менеджер операций с событиями
         appointment_manager (AppointmentManager): Менеджер встреч и приглашений
@@ -29,27 +25,16 @@ class Calendar:
         """
         Инициализирует фасадный класс Calendar, создавая все необходимые менеджеры.
 
-        Создает экземпляры всех менеджеров и настраивает их взаимодействие.
-        Использует переменные окружения для подключения к базе данных.
+        Доступ к базе данных осуществляется через Django ORM.
         """
-        # Создаем пул соединений (параметры берутся из окружения внутри DatabasePool)
-        self.db_pool = DatabasePool()
-        
-        # Инициализируем все менеджеры с необходимыми зависимостями
-        self.user_manager = UserManager(self.db_pool)
-        self.event_crud = EventCRUD(self.db_pool)
-        self.appointment_manager = AppointmentManager(self.db_pool, self.event_crud)
-        self.public_events_manager = PublicEventsManager(self.db_pool, self.event_crud)
+        self.user_manager = UserManager()
+        self.event_crud = EventCRUD()
+        self.appointment_manager = AppointmentManager(self.event_crud)
+        self.public_events_manager = PublicEventsManager()
 
     def register_user(self, telegram_id: int, username: str = None) -> str:
         """
         Регистрирует нового пользователя в системе.
-
-        Делегирует вызов менеджеру пользователей.
-
-        Args:
-            telegram_id (int): Уникальный идентификатор пользователя в Telegram
-            username (str, optional): Имя пользователя (может быть None)
 
         Returns:
             str: Сообщение об успешной регистрации или ошибке
@@ -60,15 +45,6 @@ class Calendar:
         """
         Создает новое событие для пользователя.
 
-        Делегирует вызов менеджеру событий.
-
-        Args:
-            user_id (int): ID пользователя, создающего событие
-            name (str): Название события
-            date_str (str): Дата в формате ГГГГ-ММ-ДД
-            time_str (str): Время в формате ЧЧ:ММ
-            details (str, optional): Дополнительные детали события
-
         Returns:
             str: Сообщение об успешном создании или ошибке
         """
@@ -77,11 +53,6 @@ class Calendar:
     def list_events(self, user_id: int) -> str:
         """
         Возвращает список всех событий пользователя.
-
-        Делегирует вызов менеджеру событий.
-
-        Args:
-            user_id (int): ID пользователя, чьи события нужно получить
 
         Returns:
             str: Отформатированный список событий или сообщение об их отсутствии
@@ -92,12 +63,6 @@ class Calendar:
         """
         Получает подробную информацию о конкретном событии.
 
-        Делегирует вызов менеджеру событий.
-
-        Args:
-            user_id (int): ID пользователя
-            event_id (str): ID события
-
         Returns:
             str: Детальная информация о событии или сообщение об ошибке
         """
@@ -106,16 +71,6 @@ class Calendar:
     def edit_event(self, user_id: int, event_id: str, name=None, new_date=None, new_time=None, details=None) -> str:
         """
         Редактирует существующее событие.
-
-        Делегирует вызов менеджеру событий.
-
-        Args:
-            user_id (int): ID пользователя
-            event_id (str): ID события для редактирования
-            name (optional): Новое название
-            new_date (optional): Новая дата
-            new_time (optional): Новое время
-            details (optional): Новые детали
 
         Returns:
             str: Сообщение об успешном редактировании или ошибке
@@ -126,12 +81,6 @@ class Calendar:
         """
         Удаляет событие пользователя.
 
-        Делегирует вызов менеджеру событий.
-
-        Args:
-            user_id (int): ID пользователя
-            event_id (str): ID события для удаления
-
         Returns:
             str: Сообщение об успешном удалении или ошибке
         """
@@ -140,14 +89,6 @@ class Calendar:
     def create_appointment(self, organizer_id: int, event_id: int, participant_tg_id: int, details: str = "") -> str:
         """
         Создает приглашение на встречу для участника.
-
-        Делегирует вызов менеджеру встреч.
-
-        Args:
-            organizer_id (int): ID организатора встречи
-            event_id (int): ID события, к которому создается приглашение
-            participant_tg_id (int): Telegram ID участника
-            details (str, optional): Дополнительные детали встречи
 
         Returns:
             str: Сообщение об успешном создании приглашения или ошибке
@@ -158,12 +99,10 @@ class Calendar:
         """
         Получает список встреч пользователя.
 
-        Делегирует вызов менеджеру встреч.
-
         Args:
             telegram_id (int): Telegram ID пользователя
-            as_participant (bool): Если True - возвращает встречи, куда пригласили пользователя.
-                                 Если False - возвращает встречи, которые он создал
+            as_participant (bool): Если True - встречи, куда пригласили пользователя;
+                                   если False - встречи, которые он создал
 
         Returns:
             str: Отформатированный список встреч или сообщение об их отсутствии
@@ -174,13 +113,6 @@ class Calendar:
         """
         Обновляет статус встречи для участника.
 
-        Делегирует вызов менеджеру встреч.
-
-        Args:
-            appointment_id (int): ID встречи
-            participant_id (int): Telegram ID участника
-            new_status (str): Новый статус ('pending', 'confirmed', 'declined')
-
         Returns:
             str: Сообщение об успешном изменении статуса или ошибке
         """
@@ -190,34 +122,25 @@ class Calendar:
         """
         Переключает флаг публичности события.
 
-        Делегирует вызов менеджеру публичных событий.
-
-        Args:
-            user_id (int): ID пользователя
-            event_id (str): ID события
-
         Returns:
             str: Сообщение об успешном изменении статуса или ошибке
         """
         return self.public_events_manager.toggle_public(user_id, event_id)
 
-    def get_public_events(self) -> str:
+    def get_public_events(self, current_user_id: Optional[int] = None) -> str:
         """
         Возвращает все публичные события других пользователей.
-
-        Делегирует вызов менеджеру публичных событий.
 
         Returns:
             str: Отформатированный список публичных событий или сообщение об их отсутствии
         """
-        return self.public_events_manager.get_public_events()
+        return self.public_events_manager.get_public_events(current_user_id)
 
     def close(self) -> None:
         """
-        Закрывает все соединения в пуле.
+        Заглушка для обратной совместимости.
 
-        Метод для корректного завершения работы с базой данных.
-        Должен вызываться при завершении работы приложения.
+        Соединениями с базой данных управляет Django ORM, поэтому
+        явное закрытие пула больше не требуется.
         """
-        if hasattr(self, "db_pool") and self.db_pool:
-            self.db_pool.closeall()
+        pass
