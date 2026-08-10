@@ -13,9 +13,9 @@
 
 ## 🛠 Стек технологий
 
-- **Telegram Bot**: python-telegram-bot v21
-- **Backend**: Django 5.0 + Django REST Framework
-- **База данных**: PostgreSQL 16
+- **Telegram Bot**: python-telegram-bot v22
+- **Backend**: Django 6.0 + Django REST Framework
+- **База данных**: PostgreSQL 16 (доступ через Django ORM)
 - **Оркестрация**: Docker Compose
 - **Тестирование**: pytest + pytest-django
 
@@ -94,6 +94,8 @@ python main.py
 
 > **Примечание:** Для локального запуска бота необходимо, чтобы путь к проекту был в `PYTHONPATH` или скрипт запускался из корня проекта (как в примере выше).
 
+> **Экспорт:** при локальном запуске бот обращается к Django на `http://localhost:8000`, при запуске в Docker — на `http://django:8000`. При необходимости укажите адрес явно через переменную `EXPORT_BASE_URL` в `.env`.
+
 ## 📱 Команды бота
 
 | Команда | Описание |
@@ -118,13 +120,19 @@ python main.py
 
 ## 🌐 REST API
 
-Доступно через веб-панель администратора:
+Доступно через веб-панель администратора (все эндпоинты требуют прав администратора):
 
 - `http://localhost:8000/admin/` — Django Admin
 - `http://localhost:8000/api/events/` — События
-- `http://localhost:8000/api/userprofiles/` — Профили пользователей
+- `http://localhost:8000/api/users/` — Профили пользователей
 - `http://localhost:8000/api/appointments/` — Встречи
-- `http://localhost:8000/api/botstatistics/` — Статистика бота (админ)
+- `http://localhost:8000/api/botstats/` — Статистика бота (только чтение)
+- `http://localhost:8000/api/userstats/` — Статистика пользователей (только чтение)
+
+Экспорт данных по токену (без аутентификации, токен выдаётся профилем):
+
+- `GET /export/events/?user_id=<id>&token=<token>` — события в CSV
+- `GET /export/events/json/?user_id=<id>&token=<token>` — события в JSON
 
 ## 🧪 Тестирование
 
@@ -133,26 +141,33 @@ python main.py
 docker-compose up --build tests
 ```
 
-Или локально:
+Или локально (из каталога `django-admin-panel`):
 ```bash
-pytest
+python -m pytest tests/
 ```
 
 ## 📁 Структура проекта
 
 ```
 telegabot/
-├── notes_bot/              # Telegram-бот
-│   ├── handlers/           # Обработчики команд
-│   ├── validators/         # Валидаторы дат/времени
-│   ├── utils/              # Утилиты
-│   └── *.py                # Менеджеры и бот
-├── django-admin-panel/     # Django REST API
-│   ├── events/             # Модели и API
-│   └── admin_panel/        # Настройки Django
-├── shared_utils/           # Общие утилиты
-├── tests/                  # Модульные тесты
-└── docker-compose.yml      # Оркестрация
+├── notes_bot/                  # Telegram-бот
+│   ├── handlers/               # Обработчики команд
+│   ├── validators/             # Валидаторы дат/времени
+│   ├── utils/                  # Утилиты
+│   ├── event_crud.py           # CRUD событий (Django ORM)
+│   ├── appointment_manager.py  # Менеджер встреч
+│   ├── public_events.py        # Публичные события
+│   ├── user_management.py      # Регистрация пользователей
+│   ├── statistics.py           # Статистика бота и пользователей
+│   └── calendar_interface.py   # Фасад Calendar
+├── django-admin-panel/         # Django REST API
+│   ├── events/                 # Модели, миграции, views, admin
+│   ├── admin_panel/            # Настройки Django
+│   └── tests/                  # Модульные тесты
+├── shared_utils/               # Общие утилиты
+├── .env.example                # Шаблон переменных окружения
+├── Dockerfile.bot              # Образ Telegram-бота
+└── docker-compose.yml          # Оркестрация
 ```
 
 ## 📄 Лицензия
