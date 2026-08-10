@@ -150,6 +150,7 @@ services:
       - DB_HOST_DOCKER=db
       - DB_HOST_LOCAL=localhost
       - ANYIO_BACKEND=asyncio
+      - PYTHONUNBUFFERED=1
     
     # Подключение volumes для разработки (hot reload)
     volumes:
