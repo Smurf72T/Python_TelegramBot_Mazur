@@ -5,4 +5,4 @@ from rest_framework.test import APIClient
 def test_api_events_list():
     client = APIClient()
     response = client.get('/api/events/')
-    assert response.status_code in (200, 403)  # 403 если нет аутентификации
+    assert response.status_code in (200, 401, 403)  # 401/403 если нет аутентификации

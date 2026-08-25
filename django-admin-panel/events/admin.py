@@ -64,8 +64,8 @@ class EventInline(admin.TabularInline):
             QuerySet: События текущего пользователя или пустой QuerySet
         """
         qs = super().get_queryset(request)
-        if hasattr(request, '_userprofile_inline_parent'):
-            parent = request._userprofile_inline_parent
+        parent = getattr(request, '_userprofile_inline_parent', None)
+        if parent is not None:
             return qs.filter(user_id=parent.telegram_id)
         return qs.none()
 

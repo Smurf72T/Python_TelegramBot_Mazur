@@ -13,7 +13,7 @@ Thumbs.db
 *.iml
 *.iws
 secrets.py
-db_config.py
+shared_utils/db_config.py
 
 # Vim / NeoVim
 *~

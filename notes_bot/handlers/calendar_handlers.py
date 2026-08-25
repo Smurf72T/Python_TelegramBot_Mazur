@@ -14,7 +14,7 @@ from notes_bot.calendar_functions import Calendar
 from notes_bot.statistics import get_user_stats
 
 # Импортируем общие вспомогательные функции
-from notes_bot.utils.helpers import get_user_and_calendar, require_args, send_usage_message, clear_user_data
+from notes_bot.utils.helpers import get_user_and_calendar, require_args, send_usage_message
 
 
 # Функции вынесены в notes_bot.utils.helpers

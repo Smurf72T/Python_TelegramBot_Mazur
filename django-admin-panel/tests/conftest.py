@@ -1,25 +1,22 @@
 import pytest
-import asyncio
 import sys
 import os
-from asgiref.sync import sync_to_async
 from django.test import AsyncClient
 from events.models import UserProfile, Event
 
-# Добавляем путь к django-admin-panel для импорта admin_panel
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'django-admin-panel'))
+# Добавляем пути для импорта модулей
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DJANGO_PATH = os.path.join(BASE_DIR, 'django-admin-panel')
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+if DJANGO_PATH not in sys.path:
+    sys.path.insert(0, DJANGO_PATH)
 
-# @pytest.fixture(scope="session")
-# def event_loop():
-#     loop = asyncio.get_event_loop_policy().new_event_loop()
-#     yield loop
-#     loop.close()
+# Настраиваем Django перед импортом моделей
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
 
-@pytest.fixture
-def django_db_setup(django_db_setup, django_db_blocker):
-    with django_db_blocker.unblock():
-        # Здесь можно создать тестовые данные
-        pass
+import django
+django.setup()
 
 @pytest.fixture
 async def async_client():
@@ -32,7 +29,8 @@ def calendar():
 
 @pytest.fixture
 def user_profile():
-    """Создаёт тестового пользователя"""
+    """Создаёт тестового пользователя в БД (идемпотентно: async-тесты
+    через sync_to_async пишут вне тестовой транзакции)"""
     profile, _ = UserProfile.objects.get_or_create(
         telegram_id=999999999,
         defaults={"username": "testuser"}

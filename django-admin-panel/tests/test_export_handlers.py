@@ -5,7 +5,7 @@
 """
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from telegram import Update, CallbackQuery, Message, User
+from telegram import Update, CallbackQuery, Message
 from telegram.ext import ContextTypes
 from telegram.error import TelegramError
 

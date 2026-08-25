@@ -8,7 +8,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from notes_bot.calendar_functions import Calendar
 
 # Импортируем валидаторы
 from notes_bot.validators.event_validator import validate_event_name, validate_event_details
@@ -16,7 +15,7 @@ from notes_bot.validators.date_validator import validate_date
 from notes_bot.validators.time_validator import validate_time
 
 # Импортируем общие вспомогательные функции
-from notes_bot.utils.helpers import get_user_and_calendar, require_args, send_usage_message, clear_user_data
+from notes_bot.utils.helpers import get_user_and_calendar, require_args, send_usage_message, clear_user_data, send_typing_action
 
 
 # Состояния для диалогов
@@ -38,14 +37,34 @@ async def create_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return DATE
 
 
+@send_typing_action
 async def create_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["date"] = update.message.text.strip()
-    await update.message.reply_text("Время (ЧЧ:ММ)?")
+    """Валидирует дату и переходит к вводу времени."""
+    date_str = update.message.text.strip()
+    
+    # Валидация даты
+    is_valid, result = validate_date(date_str)
+    if not is_valid:
+        await update.message.reply_text(result + "\nВведите дату заново (ГГГГ-ММ-ДД):")
+        return DATE  # Остаёмся на этом шаге
+    
+    context.user_data["date"] = date_str
+    await update.message.reply_text("Время (ЧЧ:ММ)？")
     return TIME
 
 
+@send_typing_action
 async def create_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["time"] = update.message.text.strip()
+    """Валидирует время и переходит к вводу описания."""
+    time_str = update.message.text.strip()
+    
+    # Валидация времени
+    is_valid, result = validate_time(time_str)
+    if not is_valid:
+        await update.message.reply_text(result + "\nВведите время заново (ЧЧ:ММ):")
+        return TIME  # Остаёмся на этом шаге
+    
+    context.user_data["time"] = time_str
     await update.message.reply_text("Описание (можно пустым):")
     return DETAILS
 
@@ -58,26 +77,26 @@ async def create_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = context.user_data.get("name", "").strip()
     date_str = context.user_data.get("date", "").strip()
     time_str = context.user_data.get("time", "").strip()
-    descr = update.message.text.strip()
+    descr = update.message.text.strip() if update.message.text else ""
 
     # Валидация названия события
     is_valid, error = validate_event_name(name)
     if not is_valid:
-        await update.message.reply_text(error)
+        await update.message.reply_text(error or "Ошибка названия события")
         clear_user_data(context)
         return ConversationHandler.END
 
     # Валидация даты
     is_valid, error = validate_date(date_str)
     if not is_valid:
-        await update.message.reply_text(error)
+        await update.message.reply_text(error or "Ошибка даты")
         clear_user_data(context)
         return ConversationHandler.END
 
     # Валидация времени
     is_valid, error = validate_time(time_str)
     if not is_valid:
-        await update.message.reply_text(error)
+        await update.message.reply_text(error or "Ошибка времени")
         clear_user_data(context)
         return ConversationHandler.END
 
@@ -101,8 +120,12 @@ async def list_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Показывает список всех событий пользователя.
     Использует вспомогательную функцию get_user_and_calendar для устранения дублирования.
     """
-    user_id, cal = get_user_and_calendar(update, context)
-    await update.message.reply_text(cal.list_events(user_id))
+    try:
+        user_id, cal = get_user_and_calendar(update, context)
+        result = cal.list_events(user_id)
+        await update.message.reply_text(result)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка при получении событий: {str(e)}")
 
 
 

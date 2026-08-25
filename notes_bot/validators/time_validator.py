@@ -4,7 +4,7 @@
 Содержит функции для валидации и конвертации строк со временем в объекты datetime.time.
 """
 
-from datetime import time, datetime
+from datetime import datetime
 
 
 def validate_time(time_str: str) -> tuple:

@@ -1,9 +1,3 @@
-import asyncio
-import uuid
-import os
-import sys
-
-from asgiref.sync import sync_to_async
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -11,7 +5,6 @@ from telegram.ext import (
     MessageHandler,
     filters,
     ConversationHandler,
-    ContextTypes,
     CallbackQueryHandler,
 )
 
@@ -19,6 +12,8 @@ from telegram.ext import (
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
+import sys
 import django
 
 # Настраиваем Django-окружение (только один раз)
@@ -52,7 +47,6 @@ if os.getenv('RUN_ENV') == 'docker':
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
 django.setup()
 
-from notes_bot.statistics import increment_stat, get_user_stats
 from notes_bot.calendar_functions import Calendar
 
 try:

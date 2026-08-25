@@ -3,23 +3,27 @@ python-telegram-bot==22.7
 
 # Django и REST Framework
 django>=6.0.5
-djangorestframework>=3.17.0
-django-cors-headers>=4.3.1
+djangorestframework>=3.16.1
 
 # PostgreSQL
-psycopg2-binary>=2.9.9
+psycopg2-binary>=2.9.11
 
 # Асинхронность
-asgiref>=3.7.2
+asgiref>=3.11
+
+# HTTP-клиент (используется ботом и экспортом)
+httpx>=0.27
 
 # Окружение
-python-dotenv==1.0.0
+python-dotenv>=1.0
 
 # Тестирование
 pytest==8.2.0
-pytest-django==4.7.0
-pytest-asyncio==0.24.0
+pytest-django>=4.8.0
+pytest-asyncio>=0.24
 
 # Утилиты
-certifi==2024.2.2
-charset-normalizer==3.3.2
+certifi>=2024.2.2
+charset-normalizer>=3.3.2
+sqlparse>=0.5.5
+tzdata>=2025.3

@@ -8,8 +8,7 @@ from asgiref.sync import sync_to_async
 from notes_bot.utils.helpers import (
     get_user_by_telegram_id,
     create_user_if_not_exists,
-    send_typing_action,
-    check_user_registered
+    send_typing_action
 )
 
 

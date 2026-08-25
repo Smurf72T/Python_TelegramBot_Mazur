@@ -2,7 +2,6 @@
 """Проверка структуры базы данных и наличия поля export_token"""
 
 import os
-import sys
 import django
 
 # Настройка Django
@@ -22,11 +21,11 @@ def check_database_structure():
         if hasattr(field, 'max_length') and field.max_length:
             print(f"    Максимальная длина: {field.max_length}")
         if hasattr(field, 'unique') and field.unique:
-            print(f"    Уникальное поле: Да")
+            print("    Уникальное поле: Да")
         if hasattr(field, 'null') and field.null:
-            print(f"    Может быть NULL: Да")
+            print("    Может быть NULL: Да")
         if hasattr(field, 'blank') and field.blank:
-            print(f"    Может быть пустым: Да")
+            print("    Может быть пустым: Да")
         if hasattr(field, 'help_text') and field.help_text:
             print(f"    Описание: {field.help_text}")
         print()

@@ -67,10 +67,10 @@ services:
   django:
     # Настройки сборки образа
     build:
-      # Контекст сборки: директория с Dockerfile.django
-      context: ./django-admin-panel
+      # Контекст сборки: корень проекта (чтобы получить доступ к requirements.txt)
+      context: .
       # Имя используемого Dockerfile
-      dockerfile: Dockerfile.django
+      dockerfile: django-admin-panel/Dockerfile.django
     
     # Уникальное имя контейнера
     container_name: calendar_django
@@ -161,12 +161,13 @@ services:
   # Сервис для запуска тестов
   # =============================================================================
   tests:
-    # Используем тот же Dockerfile, что и для бота
+    # Используем тот же Dockerfile, что и для бота (он содержит все зависимости)
     build:
       context: .
       dockerfile: Dockerfile.bot
     
     # Команда запуска тестов
+    # Запускаем pytest из корня проекта, где находится pytest.ini
     command: >
       sh -c "cd django-admin-panel && python -m pytest tests/ -v --ds=admin_panel.settings"
     
@@ -185,6 +186,10 @@ services:
       # Ждем полной готовности сервиса db
       db:
         condition: service_healthy
+    
+    # Переопределяем команду запуска для тестов
+    # Не используем entrypoint.sh, так как он специфичен для Django
+    entrypoint: []
 
 # =============================================================================
 # Определение volumes (томов)

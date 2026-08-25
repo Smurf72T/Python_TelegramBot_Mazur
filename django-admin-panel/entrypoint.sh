@@ -6,15 +6,32 @@
 
 RUN_ENV=${RUN_ENV:-"local"}
 
+# =============================================================================
+# Определение хоста базы данных
+# =============================================================================
+# Хост базы данных зависит от окружения выполнения:
+# - В Docker: используем имя сервиса "db" (из docker-compose.yml)
+# - Локально: используем "localhost"
+# ОБЯЗАТЕЛЬНО: установите DB_HOST_DOCKER или DB_HOST_LOCAL в .env
 if [ "$RUN_ENV" = "docker" ]; then
-    DB_HOST=${DB_HOST_DOCKER:-"db"}
+    if [ -z "$DB_HOST_DOCKER" ]; then echo "Ошибка: DB_HOST_DOCKER не установлена"; exit 1; fi
+    DB_HOST=$DB_HOST_DOCKER
 else
-    DB_HOST=${DB_HOST_LOCAL:-"localhost"}
+    if [ -z "$DB_HOST_LOCAL" ]; then echo "Ошибка: DB_HOST_LOCAL не установлена"; exit 1; fi
+    DB_HOST=$DB_HOST_LOCAL
 fi
 
-DB_PORT=${DB_PORT:-5432}
-DB_USER=${DB_USER:-postgres}
-DB_PASSWORD=${DB_PASSWORD:-postgres}
+# =============================================================================
+# Конфигурация подключения к базе данных
+# =============================================================================
+# Параметры подключения к PostgreSQL (обязательные переменные окружения)
+if [ -z "$DB_PORT" ]; then echo "Ошибка: DB_PORT не установлена"; exit 1; fi
+if [ -z "$DB_USER" ]; then echo "Ошибка: DB_USER не установлена"; exit 1; fi
+if [ -z "$DB_PASSWORD" ]; then echo "Ошибка: DB_PASSWORD не установлена"; exit 1; fi
+
+DB_PORT=$DB_PORT
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASSWORD
 
 echo "Ожидание готовности базы данных на хосте $DB_HOST..."
 max_retries=60
@@ -36,15 +53,22 @@ echo "База данных готова к подключению"
 echo "Применение миграций..."
 python /app/manage.py migrate --noinput
 
+# =============================================================================
+# Создание суперпользователя Django
+# =============================================================================
+# Проверяем существование суперпользователя и создаем его при необходимости.
+# ОБЯЗАТЕЛЬНО: установите ADMIN_PASSWORD в .env
+if [ -z "$ADMIN_PASSWORD" ]; then echo "Ошибка: ADMIN_PASSWORD не установлена"; exit 1; fi
+
 echo "Создание суперпользователя..."
 cat << EOF | python /app/manage.py shell
 from django.contrib.auth import get_user_model
 User = get_user_model()
 if not User.objects.filter(username='admin_sup').exists():
     User.objects.create_superuser(
-        'admin_sup',
-        'admin@admin.admin',
-        'admin123'
+        'admin_sup',      # Имя пользователя
+        'admin@admin.admin',  # Email
+        '$ADMIN_PASSWORD'        # Пароль из переменной окружения
     )
     print('Суперпользователь admin_sup успешно создан.')
 else:
